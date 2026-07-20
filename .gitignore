@@ -13,3 +13,4 @@ src-tauri/gen/
 *.rsign
 id_rsa
 id_ed25519
+.hermes/

@@ -32,6 +32,36 @@ done
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$repo_root"
+
+resolve_cargo() {
+  if [[ -n ${HUMMINGBIRD_CARGO:-} ]]; then
+    [[ -x $HUMMINGBIRD_CARGO ]] || {
+      echo "HUMMINGBIRD_CARGO is not executable: $HUMMINGBIRD_CARGO" >&2
+      return 1
+    }
+    printf '%s\n' "$HUMMINGBIRD_CARGO"
+    return 0
+  fi
+
+  local discovered
+  discovered=$(command -v cargo 2>/dev/null || true)
+  if [[ -n $discovered ]]; then
+    printf '%s\n' "$discovered"
+    return 0
+  fi
+
+  local cargo_home=${CARGO_HOME:-}
+  if [[ -z $cargo_home && -n ${HOME:-} ]]; then cargo_home=$HOME/.cargo; fi
+  if [[ -n $cargo_home && -x $cargo_home/bin/cargo ]]; then
+    printf '%s\n' "$cargo_home/bin/cargo"
+    return 0
+  fi
+
+  echo 'Cargo was not found. Install Rust or set HUMMINGBIRD_CARGO to the cargo executable.' >&2
+  return 1
+}
+
+cargo_bin=$(resolve_cargo)
 [[ $(git branch --show-current) == main ]] || { echo 'Release must run on main.' >&2; exit 1; }
 [[ -z $(git status --porcelain) ]] || { echo 'Working tree and index must be clean.' >&2; exit 1; }
 git fetch origin main --tags
@@ -100,9 +130,9 @@ run_checks() {
   npm run typecheck
   npm run lint
   npm run build
-  cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
-  cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
-  cargo test --manifest-path src-tauri/Cargo.toml
+  "$cargo_bin" fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+  "$cargo_bin" clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+  "$cargo_bin" test --manifest-path src-tauri/Cargo.toml
 }
 
 if $dry_run; then

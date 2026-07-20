@@ -54,6 +54,19 @@ assert_unchanged() {
 (cd "$repo" && PATH="$fixture/bin:$PATH" ./scripts/release.sh 1.2.3 --dry-run)
 assert_unchanged
 
+# Desktop launchers may omit Cargo from PATH. The helper must still discover
+# the conventional CARGO_HOME installation before entering the long checks.
+mkdir -p "$fixture/cargo-home/bin"
+mv "$fixture/bin/cargo" "$fixture/cargo-home/bin/cargo"
+node_bin_dir=$(dirname "$(command -v node)")
+rg_bin_dir=$(dirname "$(command -v rg)")
+(cd "$repo" && \
+  CARGO_HOME="$fixture/cargo-home" \
+  PATH="$fixture/bin:$node_bin_dir:$rg_bin_dir:/usr/bin:/bin" \
+  ./scripts/release.sh 1.2.3 --dry-run)
+assert_unchanged
+mv "$fixture/cargo-home/bin/cargo" "$fixture/bin/cargo"
+
 # The first public release may use the version already committed on main. In
 # that case the helper must tag the current commit without inventing an empty
 # release commit.

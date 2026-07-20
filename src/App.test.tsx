@@ -34,15 +34,15 @@ vi.mock('./api/tauri', () => ({
 const api = vi.mocked(tauriApi);
 const settings: SettingsDto = {
   schemaVersion: 1,
-  migrationVersion: 1,
+  migrationVersion: 2,
   baseUrl: 'https://api.example.test/v1',
   apiKey: 'secret',
   model: 'deepseek-chat',
   timeoutSeconds: 600,
   maxTokens: 16384,
   outputDirectory: 'output',
-  chunkMaxChars: 30000,
-  contextChars: 3000,
+  chunkMaxChars: 12000,
+  contextChars: 1500,
   lastInputDir: '/private/input',
 };
 

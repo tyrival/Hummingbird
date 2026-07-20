@@ -33,7 +33,7 @@
 | `.doc` 给出另存为 DOCX 提示 | `extraction/mod.rs` | `legacy_doc_returns_explicit_save_as_docx_guidance` |
 | 单文件最大 50 MiB | `MAX_INPUT_BYTES` | 边界值 50 MiB 接受、超 1 字节拒绝 |
 | 说明书总长度不截断 | `chunking.rs`、`task.rs` | 多块逐一处理、长行 Unicode 无损、上下文超限二分测试 |
-| 默认 30000 字符、上下文 3000，范围 8000–60000 | `settings.rs`、`chunking.rs`、`SettingsModal.tsx` | Rust 默认/校验测试与 React 表单测试 |
+| 默认 12000 字符、上下文 1500，范围 8000–60000 | `settings.rs`、`chunking.rs`、`SettingsModal.tsx` | Rust 默认/校验测试与 React 表单测试 |
 | 固定 12 列 AWT CSV、UTF-8 BOM | `register_csv.rs`、`output.rs` | 固定表头、合并/排序/冲突和 BOM 输出测试 |
 | 旧配置一次迁移 | `settings.rs` | 多编码、已迁移不重复、原文件不修改、原子保存测试 |
 | API key 不进入错误、日志或仓库 | `error.rs`、`task.rs`、`check-no-secrets.sh` | 序列化/日志脱敏测试、scanner 自测和仓库扫描 |

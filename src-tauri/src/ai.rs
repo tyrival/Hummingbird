@@ -56,7 +56,47 @@ impl AiClient {
         total: usize,
         cancellation: &CancellationToken,
     ) -> Result<String, AppError> {
-        let user_content = build_user_content(chunk, position, total);
+        self.extract_chunk_with_instruction(
+            system_prompt,
+            chunk,
+            position,
+            total,
+            None,
+            cancellation,
+        )
+        .await
+    }
+
+    pub async fn extract_chunk_with_correction(
+        &self,
+        system_prompt: &str,
+        chunk: &DocumentChunk,
+        position: usize,
+        total: usize,
+        diagnostics: &str,
+        cancellation: &CancellationToken,
+    ) -> Result<String, AppError> {
+        self.extract_chunk_with_instruction(
+            system_prompt,
+            chunk,
+            position,
+            total,
+            Some(diagnostics),
+            cancellation,
+        )
+        .await
+    }
+
+    async fn extract_chunk_with_instruction(
+        &self,
+        system_prompt: &str,
+        chunk: &DocumentChunk,
+        position: usize,
+        total: usize,
+        correction: Option<&str>,
+        cancellation: &CancellationToken,
+    ) -> Result<String, AppError> {
+        let user_content = build_user_content(chunk, position, total, correction);
 
         for attempt in 0..=MAX_RETRIES {
             match self
@@ -182,14 +222,24 @@ impl AiClient {
     }
 }
 
-fn build_user_content(chunk: &DocumentChunk, position: usize, total: usize) -> String {
+fn build_user_content(
+    chunk: &DocumentChunk,
+    position: usize,
+    total: usize,
+    correction: Option<&str>,
+) -> String {
     let context = chunk.prior_context.as_deref().map_or_else(String::new, |value| {
         format!(
             "上一块末尾上下文（仅用于理解跨块表格，不要重复提取其中已完整出现的记录）：\n{value}\n\n"
         )
     });
+    let correction = correction.map_or_else(String::new, |diagnostics| {
+        format!(
+            "上一次响应未通过 CSV 结构校验（{diagnostics}）。请重新提取当前块。每条记录必须严格包含 12 列；unit 为空也必须保留两个逗号。不要复述诊断，不要输出解释。\n\n"
+        )
+    });
     format!(
-        "以下是设备说明书的第 {position}/{total} 块内容。请只提取本块出现的寄存器信息，按模板输出 CSV：\n\n{context}{}",
+        "{correction}以下是设备说明书的第 {position}/{total} 块内容。请只提取本块出现的寄存器信息，按模板输出 CSV：\n\n{context}{}",
         chunk.text
     )
 }
@@ -363,6 +413,39 @@ mod tests {
         assert!(user.contains("不要重复提取"));
         assert!(user.contains("PREVIOUS TAIL"));
         assert!(user.ends_with("CURRENT CHUNK"));
+    }
+
+    #[tokio::test]
+    async fn correction_request_contains_only_structural_diagnostics_and_not_the_prior_response() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .respond_with(success(CSV))
+            .expect(1)
+            .mount(&server)
+            .await;
+        let client = client(&server, 5, 4096);
+        let diagnostics = "有效记录 0；修复缺失 unit 0；拒绝记录 3；列数分布 11列=3";
+
+        client
+            .extract_chunk_with_correction(
+                "SYSTEM PROMPT",
+                &chunk("CURRENT CHUNK"),
+                1,
+                1,
+                diagnostics,
+                &CancellationToken::new(),
+            )
+            .await
+            .expect("correction request should succeed");
+
+        let request = server.received_requests().await.unwrap().remove(0);
+        let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+        let user = body["messages"][1]["content"].as_str().unwrap();
+        assert!(user.contains("上一次响应未通过 CSV 结构校验"));
+        assert!(user.contains(diagnostics));
+        assert!(user.contains("unit 为空也必须保留两个逗号"));
+        assert!(user.ends_with("CURRENT CHUNK"));
+        assert!(!user.contains("PRIOR RAW RESPONSE"));
     }
 
     #[tokio::test]

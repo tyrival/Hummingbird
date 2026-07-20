@@ -1,7 +1,10 @@
 use crate::{error::AppError, naming::NamingCatalog};
 use csv::{ReaderBuilder, WriterBuilder};
 use regex::Regex;
-use std::{collections::HashSet, sync::LazyLock};
+use std::{
+    collections::{BTreeMap, HashSet},
+    sync::LazyLock,
+};
 
 pub const CSV_HEADER: &str =
     "id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style";
@@ -10,6 +13,33 @@ pub const CSV_HEADER: &str =
 pub struct SanitizedCsv {
     pub csv: String,
     pub warnings: Vec<String>,
+    pub diagnostics: CsvDiagnostics,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CsvDiagnostics {
+    pub valid_records: usize,
+    pub repaired_missing_unit: usize,
+    pub rejected_records: usize,
+    pub column_counts: BTreeMap<usize, usize>,
+}
+
+impl CsvDiagnostics {
+    pub fn summary(&self) -> String {
+        let columns = self
+            .column_counts
+            .iter()
+            .map(|(width, count)| format!("{width}列={count}"))
+            .collect::<Vec<_>>()
+            .join("、");
+        format!(
+            "有效记录 {}；修复缺失 unit {}；拒绝记录 {}；列数分布 {}",
+            self.valid_records,
+            self.repaired_missing_unit,
+            self.rejected_records,
+            if columns.is_empty() { "无" } else { &columns }
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -92,12 +122,14 @@ pub fn sanitize_csv(input: &str, catalog: &NamingCatalog) -> Result<SanitizedCsv
         .from_reader(input.as_bytes());
     let mut rows = Vec::new();
     let mut warnings = Vec::new();
+    let mut diagnostics = CsvDiagnostics::default();
 
     for record in reader.records() {
         let record = match record {
             Ok(record) => record,
             Err(_) => {
                 warnings.push("忽略了无法解析的 CSV 记录。".into());
+                diagnostics.rejected_records += 1;
                 continue;
             }
         };
@@ -109,18 +141,69 @@ pub fn sanitize_csv(input: &str, catalog: &NamingCatalog) -> Result<SanitizedCsv
         if row.is_empty() || is_header(&row) || is_legacy_comment(&row) {
             continue;
         }
+        *diagnostics.column_counts.entry(row.len()).or_default() += 1;
+        if repair_missing_unit(&mut row) {
+            warnings.push("检测到缺少 unit 空列的 11 列记录，已安全修复。".into());
+            diagnostics.repaired_missing_unit += 1;
+        }
         if row.len() != 12 || row.first().is_none_or(|id| id.parse::<u64>().is_err()) {
             warnings.push("忽略了格式损坏的 CSV 记录。".into());
+            diagnostics.rejected_records += 1;
             continue;
         }
         normalize_row(&mut row, catalog, &mut warnings);
         rows.push(row);
+        diagnostics.valid_records += 1;
     }
 
     Ok(SanitizedCsv {
         csv: write_rows(&rows, true),
         warnings,
+        diagnostics,
     })
+}
+
+fn repair_missing_unit(row: &mut Vec<String>) -> bool {
+    if row.len() != 11
+        || row[0].parse::<u64>().is_err()
+        || row[1]
+            .parse::<u32>()
+            .ok()
+            .filter(|group| *group >= 1)
+            .is_none()
+        || row[2].is_empty()
+        || row[4]
+            .parse::<u32>()
+            .ok()
+            .filter(|reg_type| (1..=12).contains(reg_type))
+            .is_none()
+        || [5, 6, 7, 8, 10]
+            .into_iter()
+            .any(|index| row[index].parse::<u32>().is_err())
+        || row[8] != "3"
+    {
+        return false;
+    }
+    let Some(address) = parse_register_address(&row[3]) else {
+        return false;
+    };
+    row[3] = address.to_string();
+    row.insert(3, String::new());
+    true
+}
+
+fn parse_register_address(value: &str) -> Option<u64> {
+    let value = value.trim();
+    if let Some(hex) = value
+        .strip_prefix("0x")
+        .or_else(|| value.strip_prefix("0X"))
+    {
+        return u64::from_str_radix(hex, 16).ok();
+    }
+    if let Some(hex) = value.strip_suffix('H').or_else(|| value.strip_suffix('h')) {
+        return u64::from_str_radix(hex, 16).ok();
+    }
+    value.parse().ok()
 }
 
 pub fn merge_csv_results(results: &[SanitizedCsv]) -> MergedCsv {
@@ -534,6 +617,10 @@ mod tests {
         assert_eq!(rows[1], "1,1,DOC_,,100,6,1,0,0,3,,0");
         assert_eq!(rows[2], "2,1,DOC_DOC_,,101,6,1,0,0,3,,0");
         assert_eq!(result.warnings.len(), 2);
+        assert_eq!(result.diagnostics.valid_records, 2);
+        assert_eq!(result.diagnostics.repaired_missing_unit, 0);
+        assert_eq!(result.diagnostics.rejected_records, 0);
+        assert_eq!(result.diagnostics.column_counts.get(&12), Some(&2));
     }
 
     #[test]
@@ -556,6 +643,37 @@ mod tests {
 
         assert_eq!(result.csv, CSV_HEADER);
         assert_eq!(result.warnings.len(), 2);
+    }
+
+    #[test]
+    fn repairs_only_the_known_eleven_column_shape_with_a_missing_unit() {
+        let input = format!(
+            "{CSV_HEADER}\n1,1,DOC_单三相类别,0x0800,6,1,0,0,3,,0\n2,1,Ua,0301H,6,1,1,1,3,,0"
+        );
+
+        let result = sanitize_csv(&input, &catalog()).expect("CSV should sanitize");
+
+        assert_eq!(
+            result.csv,
+            format!(
+                "{CSV_HEADER}\n1,1,DOC_单三相类别,,2048,6,1,0,0,3,,0\n2,1,Ua,,769,6,1,1,1,3,,0"
+            )
+        );
+        assert_eq!(result.warnings.len(), 2);
+    }
+
+    #[test]
+    fn rejects_an_ambiguous_eleven_column_row_instead_of_guessing() {
+        let input = format!("{CSV_HEADER}\n1,1,Ua,not-an-address,6,1,0,0,3,,0");
+
+        let result = sanitize_csv(&input, &catalog()).expect("CSV should sanitize");
+
+        assert_eq!(result.csv, CSV_HEADER);
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.diagnostics.valid_records, 0);
+        assert_eq!(result.diagnostics.repaired_missing_unit, 0);
+        assert_eq!(result.diagnostics.rejected_records, 1);
+        assert_eq!(result.diagnostics.column_counts.get(&11), Some(&1));
     }
 
     #[test]

@@ -501,10 +501,68 @@ impl ExtractionTaskManager {
                 .await
             {
                 Ok(raw_csv) => {
-                    let sanitized = sanitize_csv(&raw_csv, &request.catalog)?;
-                    if sanitized_record_count(&sanitized.csv) == 0 && !sanitized.warnings.is_empty()
+                    let mut sanitized = sanitize_csv(&raw_csv, &request.catalog)?;
+                    if sanitized.diagnostics.valid_records == 0
+                        && sanitized.diagnostics.rejected_records > 0
                     {
-                        return Err(AppError::new(ErrorCode::InvalidAiCsv));
+                        let diagnostics = sanitized.diagnostics.summary();
+                        emit_log(
+                            events,
+                            task_id,
+                            LogLevel::Warn,
+                            &format!(
+                                "第 {}/{} 块 CSV 结构无效，正在进行一次格式纠错：{diagnostics}",
+                                completed_chunks + 1,
+                                total_chunks
+                            ),
+                            &request.settings.api_key,
+                        );
+                        let corrected_raw = client
+                            .extract_chunk_with_correction(
+                                &system_prompt,
+                                &chunk,
+                                completed_chunks + 1,
+                                total_chunks,
+                                &diagnostics,
+                                &cancellation,
+                            )
+                            .await?;
+                        sanitized = sanitize_csv(&corrected_raw, &request.catalog)?;
+                        if sanitized.diagnostics.valid_records == 0
+                            && sanitized.diagnostics.rejected_records > 0
+                        {
+                            let corrected_diagnostics = sanitized.diagnostics.summary();
+                            let Ok([left, right]) = bisect_chunk(&chunk, policy) else {
+                                emit_log(
+                                    events,
+                                    task_id,
+                                    LogLevel::Error,
+                                    &format!(
+                                        "第 {}/{} 块格式纠错后仍无有效记录，且已达到最小分块：{corrected_diagnostics}",
+                                        completed_chunks + 1,
+                                        total_chunks
+                                    ),
+                                    &request.settings.api_key,
+                                );
+                                return Err(AppError::new(ErrorCode::InvalidAiCsv));
+                            };
+                            queue.push_front(right);
+                            queue.push_front(left);
+                            total_chunks += 1;
+                            emit_log(
+                                events,
+                                task_id,
+                                LogLevel::Warn,
+                                &format!(
+                                    "第 {}/{} 块格式纠错后仍无有效记录，已二分后继续：{corrected_diagnostics}",
+                                    completed_chunks + 1,
+                                    total_chunks - 1
+                                ),
+                                &request.settings.api_key,
+                            );
+                            self.set_progress(task_id, completed_chunks, total_chunks, events);
+                            continue;
+                        }
                     }
                     for warning in &sanitized.warnings {
                         emit_log(
@@ -1201,7 +1259,7 @@ mod tests {
             .respond_with(ResponseTemplate::new(200).set_body_json(json!({
                 "choices": [{"message": {"content": "not csv hb-secret"}}]
             })))
-            .expect(1)
+            .expect(2)
             .mount(&server)
             .await;
         let fixture = TaskFixture::new(&server, "address,name\n100,Ua".into());
@@ -1221,9 +1279,82 @@ mod tests {
         );
         let serialized = serde_json::to_string(&received).unwrap();
         assert!(!serialized.contains("hb-secret"));
-        assert_eq!(server.received_requests().await.unwrap().len(), 1);
+        let requests = server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(user_content(&requests[1]).contains("上一次响应未通过 CSV 结构校验"));
         assert_eq!(fs::read_dir(fixture.output.path()).unwrap().count(), 0);
         assert!(!staging_dir.exists());
+    }
+
+    #[tokio::test]
+    async fn retries_one_invalid_csv_response_with_format_correction() {
+        let server = MockServer::start().await;
+        Mock::given(method("POST"))
+            .respond_with(SequenceResponder::new(vec![
+                ResponseTemplate::new(200).set_body_json(json!({
+                    "choices": [{"message": {"content": "not csv"}}]
+                })),
+                csv_response(100),
+            ]))
+            .expect(2)
+            .mount(&server)
+            .await;
+        let fixture = TaskFixture::new(&server, "address,name\n100,Ua".into());
+        let (events, mut receiver) = channel_events();
+        fixture.manager.start(fixture.request(), events).unwrap();
+
+        let received = collect_until_terminal(&mut receiver).await;
+
+        assert!(received.iter().any(|event| matches!(
+            event,
+            TaskEvent::Completed {
+                record_count: 1,
+                ..
+            }
+        )));
+        let requests = server.received_requests().await.unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(user_content(&requests[1]).contains("上一次响应未通过 CSV 结构校验"));
+    }
+
+    #[tokio::test]
+    async fn bisects_only_the_invalid_chunk_after_correction_also_fails() {
+        let server = MockServer::start().await;
+        let invalid = ResponseTemplate::new(200).set_body_json(json!({
+            "choices": [{"message": {"content": "not csv"}}]
+        }));
+        Mock::given(method("POST"))
+            .respond_with(SequenceResponder::new(vec![
+                invalid.clone(),
+                invalid,
+                csv_response(100),
+                csv_response(101),
+            ]))
+            .expect(4)
+            .mount(&server)
+            .await;
+        let document = format!("LONG_SECTION\n{}", "中".repeat(9_500));
+        let fixture = TaskFixture::new_with_chunk_max(&server, document, 12_000);
+        let (events, mut receiver) = channel_events();
+        fixture.manager.start(fixture.request(), events).unwrap();
+
+        let received = collect_until_terminal(&mut receiver).await;
+
+        assert!(received.iter().any(|event| matches!(
+            event,
+            TaskEvent::Completed {
+                record_count: 2,
+                ..
+            }
+        )));
+        assert!(received.iter().any(|event| matches!(
+            event,
+            TaskEvent::Progress {
+                completed_chunks: 0,
+                total_chunks: 2,
+                ..
+            }
+        )));
     }
 
     #[test]

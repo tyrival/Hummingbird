@@ -11,16 +11,17 @@ use tauri::{AppHandle, Manager};
 use tempfile::Builder;
 
 const SCHEMA_VERSION: u32 = 1;
-const MIGRATION_VERSION: u32 = 1;
+const MIGRATION_VERSION: u32 = 2;
 const DEFAULT_BASE_URL: &str = "http://192.168.32.20:3000/v1";
 const DEFAULT_MODEL: &str = "deepseek-chat";
 const DEFAULT_TIMEOUT_SECONDS: u64 = 600;
 const DEFAULT_MAX_TOKENS: u32 = 16_384;
 const DEFAULT_OUTPUT_DIRECTORY: &str = "output";
-const DEFAULT_CHUNK_MAX_CHARS: usize = 30_000;
-const DEFAULT_CONTEXT_CHARS: usize = 3_000;
+const DEFAULT_CHUNK_MAX_CHARS: usize = 12_000;
+const DEFAULT_CONTEXT_CHARS: usize = 1_500;
 const MIN_CHUNK_MAX_CHARS: usize = 8_000;
 const MAX_CHUNK_MAX_CHARS: usize = 60_000;
+const MAX_CONTEXT_CHARS: usize = 3_000;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -87,7 +88,7 @@ impl Settings {
             || self.timeout_seconds == 0
             || self.max_tokens == 0
             || !(MIN_CHUNK_MAX_CHARS..=MAX_CHUNK_MAX_CHARS).contains(&self.chunk_max_chars)
-            || self.context_chars > DEFAULT_CONTEXT_CHARS
+            || self.context_chars > MAX_CONTEXT_CHARS
         {
             return Err(AppError::new(ErrorCode::InvalidSettings));
         }
@@ -139,13 +140,29 @@ impl SettingsStore {
         legacy_candidates: &[PathBuf],
     ) -> LoadOutcome {
         if settings_path.exists() {
-            return match fs::read(&settings_path)
+            let loaded = fs::read(&settings_path)
                 .ok()
                 .and_then(|bytes| serde_json::from_slice::<Settings>(&bytes).ok())
-                .filter(|settings| settings.validate().is_ok())
-            {
-                Some(settings) => LoadOutcome::new(settings),
-                None => LoadOutcome::warning(
+                .and_then(|settings| migrate_existing_settings(settings).ok());
+            return match loaded {
+                Some((settings, migrated)) if settings.validate().is_ok() => {
+                    if migrated {
+                        let outcome = LoadOutcome::warning(
+                            settings,
+                            "migrated version 1 chunk defaults to 12000/1500",
+                        );
+                        if Self::save_to_path(&settings_path, &outcome.settings).is_err() {
+                            return LoadOutcome::warning(
+                                outcome.settings,
+                                "settings migration succeeded in memory but could not be persisted",
+                            );
+                        }
+                        outcome
+                    } else {
+                        LoadOutcome::new(settings)
+                    }
+                }
+                _ => LoadOutcome::warning(
                     Settings::default(),
                     "existing settings.json is unreadable or invalid; using defaults",
                 ),
@@ -209,6 +226,26 @@ impl SettingsStore {
             .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
 
         Ok(())
+    }
+}
+
+fn migrate_existing_settings(mut settings: Settings) -> Result<(Settings, bool), ()> {
+    if settings.schema_version != SCHEMA_VERSION {
+        return Err(());
+    }
+    match settings.migration_version {
+        MIGRATION_VERSION => Ok((settings, false)),
+        1 => {
+            if settings.chunk_max_chars == 30_000 {
+                settings.chunk_max_chars = DEFAULT_CHUNK_MAX_CHARS;
+            }
+            if settings.context_chars == 3_000 {
+                settings.context_chars = DEFAULT_CONTEXT_CHARS;
+            }
+            settings.migration_version = MIGRATION_VERSION;
+            Ok((settings, true))
+        }
+        _ => Err(()),
     }
 }
 
@@ -433,7 +470,7 @@ mod tests {
             outcome.settings.last_input_dir.as_deref(),
             Some("/tmp/中文 输入")
         );
-        assert_eq!(outcome.settings.migration_version, 1);
+        assert_eq!(outcome.settings.migration_version, 2);
         assert!(!fs::read_to_string(sandbox.path.join("settings.json"))
             .unwrap()
             .contains("UNTRUSTED"));
@@ -495,7 +532,7 @@ mod tests {
         settings.schema_version = 0;
         assert!(settings.validate().is_err());
         settings.schema_version = 1;
-        settings.migration_version = 2;
+        settings.migration_version = 3;
         assert!(settings.validate().is_err());
     }
 
@@ -548,7 +585,7 @@ mod tests {
         let settings_path = sandbox.path.join("settings.json");
         let existing = Settings {
             model: "existing-model".into(),
-            migration_version: 1,
+            migration_version: 2,
             ..Settings::default()
         };
         SettingsStore::save_to_path(&settings_path, &existing).unwrap();
@@ -562,6 +599,51 @@ mod tests {
 
         assert_eq!(outcome.settings.model, "existing-model");
         assert!(outcome.warnings.is_empty());
+    }
+
+    #[test]
+    fn migrates_only_the_old_chunk_defaults_in_existing_version_one_settings() {
+        let sandbox = TestSandbox::new("existing-chunk-defaults");
+        let settings_path = sandbox.path.join("settings.json");
+        let old_defaults = Settings {
+            migration_version: 1,
+            chunk_max_chars: 30_000,
+            context_chars: 3_000,
+            ..Settings::default()
+        };
+        fs::write(&settings_path, serde_json::to_vec(&old_defaults).unwrap()).unwrap();
+
+        let outcome =
+            SettingsStore::load_or_migrate_from_paths(settings_path.clone(), &sandbox.path, &[]);
+
+        assert_eq!(outcome.settings.migration_version, 2);
+        assert_eq!(outcome.settings.chunk_max_chars, 12_000);
+        assert_eq!(outcome.settings.context_chars, 1_500);
+        assert!(outcome
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("chunk defaults")));
+        let saved: Settings = serde_json::from_slice(&fs::read(settings_path).unwrap()).unwrap();
+        assert_eq!(saved, outcome.settings);
+    }
+
+    #[test]
+    fn preserves_custom_chunk_values_while_advancing_the_migration_version() {
+        let sandbox = TestSandbox::new("existing-custom-chunks");
+        let settings_path = sandbox.path.join("settings.json");
+        let custom = Settings {
+            migration_version: 1,
+            chunk_max_chars: 20_000,
+            context_chars: 2_000,
+            ..Settings::default()
+        };
+        fs::write(&settings_path, serde_json::to_vec(&custom).unwrap()).unwrap();
+
+        let outcome = SettingsStore::load_or_migrate_from_paths(settings_path, &sandbox.path, &[]);
+
+        assert_eq!(outcome.settings.migration_version, 2);
+        assert_eq!(outcome.settings.chunk_max_chars, 20_000);
+        assert_eq!(outcome.settings.context_chars, 2_000);
     }
 
     #[test]
@@ -582,7 +664,7 @@ mod tests {
 
         let json = fs::read_to_string(&settings_path).unwrap();
         assert!(json.contains("\"schemaVersion\": 1"));
-        assert!(json.contains("\"migrationVersion\": 1"));
+        assert!(json.contains("\"migrationVersion\": 2"));
         assert!(json.contains("replacement-model"));
         assert!(!format!("{settings:?}").contains("fixture-key-not-real"));
         let temporary_files = fs::read_dir(&sandbox.path)

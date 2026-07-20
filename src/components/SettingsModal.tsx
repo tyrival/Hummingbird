@@ -197,7 +197,7 @@ function SettingsModalContent({
                   <NumberInput
                     allowDecimal={false}
                     allowNegative={false}
-                    description="默认 30000；说明书总长度不受此项限制。"
+                    description="默认 12000；说明书总长度不受此项限制。"
                     error={errors.chunkMaxChars}
                     label="单块最大字符数"
                     max={60000}
@@ -208,7 +208,7 @@ function SettingsModalContent({
                   <NumberInput
                     allowDecimal={false}
                     allowNegative={false}
-                    description="默认 3000，仅用于跨块语义衔接，不会重复输出记录。"
+                    description="默认 1500，仅用于跨块语义衔接，不会重复输出记录。"
                     error={errors.contextChars}
                     label="跨块上下文字符数"
                     max={3000}

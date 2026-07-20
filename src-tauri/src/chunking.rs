@@ -3,8 +3,8 @@ use crate::{
     register_csv::is_circuit_range_heading,
 };
 
-pub const DEFAULT_MAX_CHARS: usize = 30_000;
-pub const DEFAULT_CONTEXT_CHARS: usize = 3_000;
+pub const DEFAULT_MAX_CHARS: usize = 12_000;
+pub const DEFAULT_CONTEXT_CHARS: usize = 1_500;
 const MIN_BISECT_CHARS: usize = 8_000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -300,12 +300,12 @@ mod tests {
     ));
 
     #[test]
-    fn policy_defaults_to_thirty_thousand_characters_with_three_thousand_context() {
+    fn policy_defaults_to_twelve_thousand_characters_with_fifteen_hundred_context() {
         assert_eq!(
             ChunkPolicy::default(),
             ChunkPolicy {
-                max_chars: 30_000,
-                context_chars: 3_000,
+                max_chars: 12_000,
+                context_chars: 1_500,
             }
         );
     }

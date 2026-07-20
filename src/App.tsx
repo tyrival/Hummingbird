@@ -17,15 +17,15 @@ import { PassthroughWorkspace } from './features/passthrough/PassthroughWorkspac
 
 const initialSettings: SettingsDto = {
   schemaVersion: 1,
-  migrationVersion: 1,
+  migrationVersion: 2,
   baseUrl: 'http://192.168.32.20:3000/v1',
   apiKey: '',
   model: 'deepseek-chat',
   timeoutSeconds: 600,
   maxTokens: 16384,
   outputDirectory: 'output',
-  chunkMaxChars: 30000,
-  contextChars: 3000,
+  chunkMaxChars: 12000,
+  contextChars: 1500,
   lastInputDir: null,
 };
 

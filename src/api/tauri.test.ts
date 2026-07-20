@@ -40,15 +40,15 @@ describe('Tauri adapter', () => {
   it('returns typed command results without exposing raw invoke to callers', async () => {
     const settings: SettingsDto = {
       schemaVersion: 1,
-      migrationVersion: 1,
+      migrationVersion: 2,
       baseUrl: 'https://api.example.test/v1',
       apiKey: '',
       model: 'deepseek-chat',
       timeoutSeconds: 600,
       maxTokens: 16384,
       outputDirectory: 'output',
-      chunkMaxChars: 30000,
-      contextChars: 3000,
+      chunkMaxChars: 12000,
+      contextChars: 1500,
       lastInputDir: null,
     };
     mockedInvoke.mockResolvedValue(settings);
@@ -104,15 +104,15 @@ describe('Tauri adapter', () => {
   it('uses the exact Rust command names and camelCase arguments', async () => {
     const settings = {
       schemaVersion: 1,
-      migrationVersion: 1,
+      migrationVersion: 2,
       baseUrl: 'https://api.example.test/v1',
       apiKey: '',
       model: 'deepseek-chat',
       timeoutSeconds: 600,
       maxTokens: 16384,
       outputDirectory: 'output',
-      chunkMaxChars: 30000,
-      contextChars: 3000,
+      chunkMaxChars: 12000,
+      contextChars: 1500,
       lastInputDir: null,
     } satisfies SettingsDto;
     mockedInvoke.mockResolvedValue(undefined);

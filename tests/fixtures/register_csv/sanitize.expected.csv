@@ -1,0 +1,7 @@
+id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style
+1,6,DOC_重合闸开关,,237,6,1,0,0,3,,0
+2,3,DOC_状态,,19,6,1,0,0,3,,0
+3,1,DOC_CH1-CH16重合闸参数,,225,6,1,0,0,3,,0
+4,1,Ua,,100,6,1,0,0,3,,0
+5,4,"DOC_Status, detail",,101,6,1,0,0,3,,0
+6,1,DOC_CH2,,102,6,1,0,0,3,,0

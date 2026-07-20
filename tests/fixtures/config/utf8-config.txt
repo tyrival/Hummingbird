@@ -1,0 +1,7 @@
+﻿AI_API_BASE_URL=https://api.example.test/v1
+AI_API_KEY=
+AI_MODEL=deepseek-chat
+AI_REQUEST_TIMEOUT=600
+AI_MAX_TOKENS=16384
+OUTPUT_DIR=output
+LAST_INPUT_DIR=/tmp/中文 输入

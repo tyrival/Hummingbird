@@ -1,0 +1,8 @@
+```csv
+id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style
+1,1,StatusBit0,,101,1,1,0,0,3,,0
+2,1,StatusBit1,,101,1,1,0,0,3,,0
+3,4,DOC_Alarm,,733,6,1,0,0,3,,0
+4,6,P,,733,12,1,0,0,3,,0
+5,5,DOC_Alarm,,734,6,1,0,0,3,,0
+```

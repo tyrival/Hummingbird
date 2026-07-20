@@ -1,0 +1,11 @@
+```csv
+id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style
+流水号,组号,参数名,单位,寄存器地址,数据类型,端序,采集小数位,转发小数位,功能码,计算,样式
+1,invalid,DOC_CH6重合闸开关,,237,6,1,0,0,3,,0
+2,1,DOC_第三回路状态,,19,6,1,0,0,3,,0
+3,1,DOC_CH1-CH16重合闸参数,,225,6,1,0,0,3,,0
+4,0,Ua,,100,6,1,0,0,3,,0
+5,1,"DOC_Channel 4 Status, detail",,101,6,1,0,0,3,,0
+6,1,DOC_CH2,,102,6,1,0,0,3,,0
+id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style
+```

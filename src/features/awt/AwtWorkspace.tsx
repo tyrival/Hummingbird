@@ -1,22 +1,16 @@
 import {
-  Alert,
   Badge,
   Button,
   Card,
   Group,
-  Progress,
   Text,
   Title,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import {
-  IconAlertCircle,
-  IconCheck,
   IconFileDescription,
   IconFolderOpen,
-  IconPlayerPlay,
   IconSettings,
-  IconSquare,
   IconUpload,
 } from '@tabler/icons-react';
 import { type JSX, useEffect, useRef, useState } from 'react';
@@ -26,8 +20,8 @@ import {
   openTaskOutputDirectory,
   selectInputFile,
 } from '../../api/tauri';
-import type { AppErrorDto, SelectedInputDto, TaskStage } from '../../api/types';
-import { LogPanel } from '../../components/LogPanel';
+import type { AppErrorDto, SelectedInputDto } from '../../api/types';
+import { LogPanel, type TaskControlState, type TaskTerminal } from '../../components/LogPanel';
 import { useExtractionTask } from './useExtractionTask';
 
 interface AwtWorkspaceProps {
@@ -35,18 +29,6 @@ interface AwtWorkspaceProps {
   onOpenSettings: () => void;
   onTaskActiveChange: (active: boolean) => void;
 }
-
-const stageLabels: Record<TaskStage, string> = {
-  validating_input: '正在校验文件',
-  extracting_text: '正在提取文档文字',
-  preparing_chunks: '正在准备文档分块',
-  calling_ai: '正在调用 AI',
-  merging_results: '正在合并寄存器结果',
-  saving_output: '正在保存 CSV',
-  completed: '处理完成',
-  cancelled: '任务已取消',
-  failed: '处理失败',
-};
 
 export function AwtWorkspace({
   outputDirectory,
@@ -136,7 +118,33 @@ export function AwtWorkspace({
   const progressValue = task.totalChunks > 0
     ? (task.completedChunks / task.totalChunks) * 100
     : 0;
-  const completedResult = task.terminal?.type === 'completed' ? task.terminal : null;
+
+  const terminal: TaskTerminal | null = (() => {
+    if (task.terminal?.type === 'completed') {
+      return {
+        type: 'completed',
+        outputPath: task.terminal.outputPath,
+        recordCount: task.terminal.recordCount,
+      };
+    }
+    if (task.terminal?.type === 'cancelled') {
+      return { type: 'cancelled' };
+    }
+    if (task.terminal?.type === 'failed') {
+      return { type: 'failed', message: task.terminal.error.message };
+    }
+    return null;
+  })();
+
+  const taskControl: TaskControlState = {
+    active: task.active,
+    canStart: !!selectedInput && !inputConsumed,
+    stage: task.stage,
+    completedChunks: task.completedChunks,
+    totalChunks: task.totalChunks,
+    progressValue,
+    terminal,
+  };
 
   return (
     <main className="awt-workspace app-workspace" aria-labelledby="awt-heading">
@@ -180,71 +188,18 @@ export function AwtWorkspace({
               </div>
             )}
           </div>
-          <Button disabled={task.active} onClick={() => void chooseInput()} variant="light">
+          <Button disabled={task.active} miw={100} onClick={() => void chooseInput()} variant="light">
             选择文件
           </Button>
         </Group>
       </Card>
 
-      <Card className="task-card" padding="lg" radius="lg" withBorder>
-        <Group justify="space-between" mb="sm">
-          <div>
-            <Text fw={650} size="sm">{task.stage ? stageLabels[task.stage] : '等待开始'}</Text>
-            <Text c="dimmed" size="xs">
-              {task.totalChunks > 0
-                ? `${task.completedChunks} / ${task.totalChunks} 块`
-                : '进度按实际文档分块更新'}
-            </Text>
-          </div>
-          <Button
-            color={task.active ? 'red' : 'blue'}
-            disabled={!task.active && (!selectedInput || inputConsumed)}
-            leftSection={task.active ? <IconSquare size={15} /> : <IconPlayerPlay size={17} />}
-            onClick={() => void startOrStop()}
-            variant={task.active ? 'light' : 'filled'}
-          >
-            {task.active ? '停止' : '开始提取'}
-          </Button>
-        </Group>
-        <Progress
-          aria-label="文档分块进度"
-          animated={task.active && task.totalChunks === 0}
-          color={task.terminal?.type === 'failed' ? 'red' : 'blue'}
-          radius="xl"
-          size="sm"
-          value={progressValue}
-        />
-      </Card>
-
-      {completedResult && (
-        <Alert color="teal" icon={<IconCheck size={18} />} title="模板生成完成">
-          <Group justify="space-between" wrap="nowrap">
-            <Text size="sm">
-              已生成 {completedResult.recordCount} 条记录，保存至 {completedResult.outputPath}
-            </Text>
-            <Button
-              color="teal"
-              onClick={() => void openCompletedOutput(completedResult.outputPath)}
-              size="xs"
-              variant="light"
-            >
-              打开目录
-            </Button>
-          </Group>
-        </Alert>
-      )}
-      {task.terminal?.type === 'cancelled' && (
-        <Alert color="gray" icon={<IconSquare size={16} />} title="任务已停止">
-          任务已取消，未保存部分结果。
-        </Alert>
-      )}
-      {task.terminal?.type === 'failed' && (
-        <Alert color="red" icon={<IconAlertCircle size={18} />} role="alert" title="处理失败">
-          {task.terminal.error.message}
-        </Alert>
-      )}
-
-      <LogPanel entries={task.logs} />
+      <LogPanel
+        entries={task.logs}
+        onOpenOutput={openCompletedOutput}
+        onStartStop={() => void startOrStop()}
+        task={taskControl}
+      />
 
       <footer className="workspace-footer">
         <Text c="dimmed" size="xs">输出目录</Text>

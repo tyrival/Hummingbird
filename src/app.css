@@ -12,8 +12,8 @@
 html,
 body,
 #root {
-  min-width: 720px;
-  min-height: 520px;
+  min-width: 940px;
+  min-height: 680px;
   height: 100%;
   margin: 0;
 }
@@ -154,7 +154,6 @@ input:focus-visible,
 }
 
 .input-card,
-.task-card,
 .log-panel {
   background: var(--mantine-color-white);
   border-color: var(--mantine-color-gray-3);
@@ -201,14 +200,17 @@ input:focus-visible,
 }
 
 .log-panel {
-  min-height: 176px;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid var(--mantine-color-gray-3);
   border-radius: var(--mantine-radius-lg);
 }
 
 .log-panel__scroll {
-  height: 150px;
+  min-height: 0;
   border-top: 1px solid var(--mantine-color-gray-2);
 }
 
@@ -270,7 +272,6 @@ input:focus-visible,
 }
 
 [data-mantine-color-scheme='dark'] .input-card,
-[data-mantine-color-scheme='dark'] .task-card,
 [data-mantine-color-scheme='dark'] .log-panel {
   background: var(--mantine-color-dark-7);
   border-color: var(--mantine-color-dark-5);
@@ -329,13 +330,5 @@ input:focus-visible,
 
   .awt-workspace {
     gap: 10px;
-  }
-
-  .log-panel {
-    min-height: 146px;
-  }
-
-  .log-panel__scroll {
-    height: 120px;
   }
 }

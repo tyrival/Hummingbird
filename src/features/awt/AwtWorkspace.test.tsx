@@ -129,7 +129,7 @@ describe('AwtWorkspace', () => {
       });
     });
 
-    expect(screen.getByText('处理完成')).toBeInTheDocument();
+    expect(screen.getByText(/处理完成/)).toBeInTheDocument();
     expect(screen.getAllByText(/已生成 37 条记录/)).toHaveLength(2);
     fireEvent.click(screen.getByRole('button', { name: '打开目录' }));
     expect(api.openTaskOutputDirectory).toHaveBeenCalledWith('/tmp/output/manual.csv');
@@ -178,10 +178,8 @@ describe('AwtWorkspace', () => {
     expect(api.cancelExtraction).toHaveBeenCalledOnce();
     act(() => taskListener?.({ type: 'cancelled', taskId: 'task-1' }));
 
-    expect(screen.getAllByText('任务已取消，未保存部分结果。')).toHaveLength(2);
-    expect(screen.getByText('任务已停止').closest('[role="alert"]')).toHaveStyle({
-      '--alert-color': 'var(--mantine-color-gray-light-color)',
-    });
+    expect(screen.getByText('任务已取消，未保存部分结果。')).toBeInTheDocument();
+    expect(screen.getByText('任务已取消')).toBeInTheDocument();
     confirm.mockRestore();
   });
 
@@ -201,8 +199,8 @@ describe('AwtWorkspace', () => {
       error: { code: 'authentication_failed', message: 'API 密钥无效。', detail: null },
     }));
 
-    expect(screen.getAllByText('处理失败')).toHaveLength(2);
-    expect(screen.getByRole('alert')).toHaveTextContent('API 密钥无效。');
+    expect(screen.getByText(/处理失败.*API 密钥无效/)).toBeInTheDocument();
+    expect(screen.getByText('API 密钥无效。')).toBeInTheDocument();
   });
 
   it('registers the event listener before status and converges buffered events by task id', async () => {
@@ -321,8 +319,8 @@ describe('AwtWorkspace', () => {
     });
     renderWorkspace();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('状态读取失败。');
-    expect(screen.getAllByText('处理失败')).toHaveLength(2);
+    expect(await screen.findByText(/处理失败.*状态读取失败/)).toBeInTheDocument();
+    expect(screen.getByText('状态读取失败。')).toBeInTheDocument();
   });
 
   it('clears terminal state, stage, progress and logs after selecting a new file', async () => {
@@ -336,12 +334,12 @@ describe('AwtWorkspace', () => {
     fireEvent.click(screen.getByRole('button', { name: '选择文件' }));
     await screen.findByText('/tmp/old.csv');
     fireEvent.click(screen.getByRole('button', { name: '开始提取' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('网络请求失败。');
-    expect(screen.getAllByText('处理失败')).toHaveLength(2);
+    expect(await screen.findByText(/处理失败.*网络请求失败/)).toBeInTheDocument();
+    expect(screen.getByText('网络请求失败。')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '选择文件' }));
     expect(await screen.findByText('/tmp/new.csv')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/处理失败/)).not.toBeInTheDocument();
     expect(screen.getByText('等待开始')).toBeInTheDocument();
     expect(screen.getByText('任务日志将在这里显示')).toBeInTheDocument();
   });

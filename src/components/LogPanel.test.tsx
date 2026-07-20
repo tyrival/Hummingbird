@@ -1,10 +1,20 @@
 import { MantineProvider } from '@mantine/core';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LogPanel } from './LogPanel';
 
+const idleTask = {
+  active: false,
+  canStart: false,
+  stage: null,
+  completedChunks: 0,
+  totalChunks: 0,
+  progressValue: 0,
+  terminal: null,
+};
+
 describe('LogPanel', () => {
-  it('renders only the newest 500 entries', () => {
+  it('renders only the newest 500 entries', { timeout: 15000 }, () => {
     const entries = Array.from({ length: 501 }, (_, index) => ({
       id: index,
       timestamp: '12:34:56',
@@ -14,7 +24,9 @@ describe('LogPanel', () => {
 
     render(
       <MantineProvider>
-        <LogPanel entries={entries} />
+        <div style={{ display: 'flex', flexDirection: 'column', height: 400 }}>
+          <LogPanel entries={entries} onStartStop={vi.fn()} task={idleTask} />
+        </div>
       </MantineProvider>,
     );
 

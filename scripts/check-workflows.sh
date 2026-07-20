@@ -11,10 +11,14 @@ for workflow in .github/workflows/ci.yml .github/workflows/release.yml; do
   [[ -f $workflow ]] || fail "missing $workflow"
   contains "$workflow" 'permissions:'
   contains "$workflow" 'contents: read'
-  contains "$workflow" 'actions/checkout@v4'
-  contains "$workflow" 'actions/setup-node@v4'
+  contains "$workflow" 'actions/checkout@v5'
+  contains "$workflow" 'actions/setup-node@v5'
   contains "$workflow" 'tauri-apps/tauri-action@v1'
 done
+
+if rg -n 'actions/(checkout|setup-node)@v4' .github/workflows; then
+  fail 'Node.js 20 based checkout/setup-node actions are no longer allowed'
+fi
 
 contains .github/workflows/ci.yml 'pull_request:'
 contains .github/workflows/ci.yml 'branches: [main]'

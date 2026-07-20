@@ -160,7 +160,7 @@ fn decode_csv(bytes: &[u8]) -> Result<String, AppError> {
 
 fn detect_delimiter(content: &str) -> u8 {
     let mut best = delimiter_score(content, b',');
-    for delimiter in [b';', b'\t', b'|'] {
+    for delimiter in *b";\t|" {
         let candidate = delimiter_score(content, delimiter);
         if candidate.is_better_than(&best) {
             best = candidate;

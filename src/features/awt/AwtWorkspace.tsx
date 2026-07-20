@@ -183,12 +183,12 @@ export function AwtWorkspace({
                     {selectedInput.path}
                   </Text>
                 </div>
-                <Badge color="gray" variant="light">{fileFormat(selectedInput.fileName)}</Badge>
-                <Text c="dimmed" size="xs">{formatBytes(selectedInput.sizeBytes)}</Text>
+                <Badge color="gray" style={{ flexShrink: 0 }} variant="light">{fileFormat(selectedInput.fileName)}</Badge>
+                <Text c="dimmed" size="xs" style={{ flexShrink: 0 }}>{formatBytes(selectedInput.sizeBytes)}</Text>
               </div>
             )}
           </div>
-          <Button disabled={task.active} miw={100} onClick={() => void chooseInput()} variant="light">
+          <Button disabled={task.active} miw={100} onClick={() => void chooseInput()}>
             选择文件
           </Button>
         </Group>

@@ -1,5 +1,4 @@
 import {
-  IconFeather,
   IconFileDescription,
   IconRefresh,
   IconTemplate,
@@ -18,7 +17,7 @@ interface AppSidebarProps {
 
 const items = [
   { id: 'awt' as const, label: 'AWT模板生成', icon: IconTemplate },
-  { id: 'passthrough' as const, label: '透传命令识别', icon: IconFileDescription },
+  { id: 'passthrough' as const, label: '平台日志分析', icon: IconFileDescription },
 ];
 
 export function AppSidebar({
@@ -32,7 +31,7 @@ export function AppSidebar({
     <aside className="app-sidebar" aria-label="工作区导航">
       <div className="app-sidebar__brand">
         <span className="app-sidebar__brand-icon" aria-hidden="true">
-          <IconFeather size={22} stroke={1.8} />
+          <img alt="" src="/icon.png" />
         </span>
         <h1>Hummingbird</h1>
       </div>

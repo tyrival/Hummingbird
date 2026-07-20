@@ -102,9 +102,9 @@ describe('application shell', () => {
     renderApp();
 
     const awt = screen.getByRole('button', { name: 'AWT模板生成' });
-    const passthrough = screen.getByRole('button', { name: '透传命令识别' });
+    const passthrough = screen.getByRole('button', { name: '平台日志分析' });
     expect(awt).toHaveTextContent('AWT模板生成');
-    expect(passthrough).toHaveTextContent('透传命令识别');
+    expect(passthrough).toHaveTextContent('平台日志分析');
     expect(awt).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'AWT模板生成' })).toBeInTheDocument();
 
@@ -115,9 +115,9 @@ describe('application shell', () => {
 
   it('shows a truly empty semantic passthrough workspace', () => {
     renderApp();
-    fireEvent.click(screen.getByRole('button', { name: '透传命令识别' }));
+    fireEvent.click(screen.getByRole('button', { name: '平台日志分析' }));
 
-    const workspace = screen.getByRole('main', { name: '透传命令识别' });
+    const workspace = screen.getByRole('main', { name: '平台日志分析' });
     expect(screen.getAllByRole('main')).toHaveLength(1);
     expect(workspace).toBeEmptyDOMElement();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();

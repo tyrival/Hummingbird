@@ -116,7 +116,7 @@ export function LogPanel({
             leftSection={task.active ? <IconSquare size={15} /> : <IconPlayerPlay size={17} />}
             onClick={onStartStop}
             size="compact-sm"
-            variant={task.active ? 'light' : 'filled'}
+            variant="filled"
           >
             {task.active ? '停止' : '开始提取'}
           </Button>

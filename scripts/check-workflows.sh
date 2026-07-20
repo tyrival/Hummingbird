@@ -33,6 +33,9 @@ contains .github/workflows/release.yml 'tyrival/Hummingbird-Releases'
 contains .github/workflows/release.yml "if: needs.validate.outputs.publish == 'true'"
 contains .github/workflows/release.yml "if: needs.validate.outputs.publish != 'true'"
 contains .github/workflows/release.yml "^(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)\\\\.(0|[1-9][0-9]*)$"
+
+macos_updater_bundle_count=$(grep -c 'bundles: app,dmg' .github/workflows/release.yml || true)
+[[ $macos_updater_bundle_count == 2 ]] || fail 'release workflow must build app,dmg for both macOS updater targets'
 contains scripts/release.sh 'git worktree add --detach'
 contains scripts/release.sh 'git push --atomic origin main "$tag"'
 contains scripts/release.sh 'git reset --mixed "$original_head"'

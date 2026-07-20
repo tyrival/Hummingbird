@@ -1,6 +1,6 @@
 [package]
 name = "hummingbird"
-version = "0.1.3"
+version = "1.0.0"
 description = "Hummingbird desktop application"
 authors = ["tyrival"]
 edition = "2021"

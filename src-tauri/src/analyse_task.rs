@@ -61,6 +61,12 @@ struct AnalyseManagerState {
     cancellation: Option<CancellationToken>,
 }
 
+impl Default for AnalyseTaskManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AnalyseTaskManager {
     pub fn new() -> Self {
         Self {
@@ -215,7 +221,7 @@ async fn run_analysis(
 
         let system = build_system_prompt_for_batch(batch_name);
 
-        match client.chat(&system, &prompt, cancellation).await {
+        match client.chat(&system, prompt, cancellation).await {
             Ok(content) => {
                 (events)(AnalyseEvent::AiChunk {
                     task_id,
@@ -227,7 +233,7 @@ async fn run_analysis(
                 (events)(AnalyseEvent::AiChunk {
                     task_id,
                     batch: i as u32,
-                    content: format!("*分析失败*"),
+                    content: "*分析失败*".to_string(),
                 });
             }
         }

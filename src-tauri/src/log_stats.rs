@@ -1,7 +1,11 @@
 use serde::Serialize;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use crate::log_parse::{categorize_entry, ErrorCategory, LogEntry};
+
+static PROJECT_NAME_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#""name":"([^"]+)""#).unwrap());
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -91,8 +95,7 @@ pub fn aggregate(entries: &[LogEntry]) -> LogSummary {
 
         // Extract project names from messages
         if entry.message.contains("\"name\":\"") {
-            let re = regex::Regex::new(r#""name":"([^"]+)""#).unwrap();
-            for cap in re.captures_iter(&entry.message) {
+            for cap in PROJECT_NAME_RE.captures_iter(&entry.message) {
                 let name = cap[1].to_string();
                 if !name.chars().all(|c| c.is_ascii_digit()) && !projects.contains(&name) {
                     projects.push(name);
@@ -109,7 +112,7 @@ pub fn aggregate(entries: &[LogEntry]) -> LogSummary {
             .into_iter()
             .map(|(category, count)| CategoryCount { category, count })
             .collect();
-        counts.sort_by(|a, b| b.count.cmp(&a.count));
+        counts.sort_by_key(|b| std::cmp::Reverse(b.count));
         counts
     };
 
@@ -229,7 +232,7 @@ pub fn find_thread_stuck_candidates(
             }
         }
     }
-    candidates.sort_by(|a, b| b.duration_ms.cmp(&a.duration_ms));
+    candidates.sort_by_key(|b| std::cmp::Reverse(b.duration_ms));
     candidates
 }
 

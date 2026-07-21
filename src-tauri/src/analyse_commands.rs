@@ -267,8 +267,13 @@ pub async fn download_logs_command(
     server: SshServerConfig,
     remote_files: Vec<String>,
 ) -> Result<Vec<String>, AppError> {
-    let config = get_analyse_config(app.clone());
-    let local_dir = PathBuf::from(&config.log_analyse_dir);
+    let settings = SettingsStore::load_or_migrate(&app);
+    let local_dir = if settings.log_analyse_dir.is_empty() {
+        get_analyse_config(app.clone()).log_analyse_dir
+    } else {
+        settings.log_analyse_dir
+    };
+    let local_dir = PathBuf::from(&local_dir);
     let cancellation = CancellationToken::new();
     let downloaded =
         crate::sftp_download::download_logs(&server, &remote_files, &local_dir, &cancellation)?;

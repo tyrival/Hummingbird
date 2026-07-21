@@ -255,9 +255,7 @@ pub fn test_ssh_connection(server: SshServerConfig) -> Result<String, AppError> 
 }
 
 #[tauri::command]
-pub fn list_remote_logs_command(
-    server: SshServerConfig,
-) -> Result<Vec<RemoteFile>, AppError> {
+pub fn list_remote_logs_command(server: SshServerConfig) -> Result<Vec<RemoteFile>, AppError> {
     let mut files = crate::sftp_download::list_remote_logs(&server)?;
     files.sort_by(|a, b| b.name.cmp(&a.name)); // newest first
     Ok(files)
@@ -272,12 +270,8 @@ pub async fn download_logs_command(
     let config = get_analyse_config(app.clone());
     let local_dir = PathBuf::from(&config.log_analyse_dir);
     let cancellation = CancellationToken::new();
-    let downloaded = crate::sftp_download::download_logs(
-        &server,
-        &remote_files,
-        &local_dir,
-        &cancellation,
-    )?;
+    let downloaded =
+        crate::sftp_download::download_logs(&server, &remote_files, &local_dir, &cancellation)?;
     Ok(downloaded
         .iter()
         .map(|p| p.to_string_lossy().into_owned())

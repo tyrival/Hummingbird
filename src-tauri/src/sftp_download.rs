@@ -103,9 +103,7 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
 
 /// List service-exchange.log* files in the remote log directory.
 /// Uses SFTP only — no shell/PTY commands are executed.
-pub fn list_remote_logs(
-    server: &SshServerConfig,
-) -> Result<Vec<RemoteFile>, AppError> {
+pub fn list_remote_logs(server: &SshServerConfig) -> Result<Vec<RemoteFile>, AppError> {
     let session = connect_session(server)?;
     let sftp = session
         .sftp()

@@ -183,6 +183,9 @@ export const selectLogFolder = (): Promise<string[]> =>
 export const selectKeyFile = (): Promise<string> =>
   invokeCommand<string>('select_key_file');
 
+export const selectAnalyseDir = (): Promise<string> =>
+  invokeCommand<string>('select_analyse_dir');
+
 export async function listenForAnalyseEvents(
   listener: (event: AnalyseEvent) => void,
 ): Promise<UnlistenFn> {

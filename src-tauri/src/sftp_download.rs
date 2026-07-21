@@ -159,6 +159,16 @@ pub fn download_logs(
 ) -> Result<Vec<PathBuf>, AppError> {
     std::fs::create_dir_all(local_dir).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
 
+    // Clear old service-exchange log files before downloading new ones
+    if let Ok(entries) = std::fs::read_dir(local_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.starts_with("service-exchange.log") {
+                let _ = std::fs::remove_file(entry.path());
+            }
+        }
+    }
+
     let session = connect_session(server)?;
     let sftp = session
         .sftp()

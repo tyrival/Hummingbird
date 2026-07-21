@@ -29,6 +29,7 @@ function renderWorkspace(onTaskActiveChange = vi.fn()) {
       <AwtWorkspace
         outputDirectory="output"
         onOpenSettings={vi.fn()}
+        onOutputDirectoryChange={vi.fn()}
         onTaskActiveChange={onTaskActiveChange}
       />
     </MantineProvider>,

@@ -15,10 +15,13 @@ import {
 } from '@tabler/icons-react';
 import { type JSX, useEffect, useRef, useState } from 'react';
 import {
+  getSettings,
   listenForInputDropResults,
   openOutputDirectory,
   openTaskOutputDirectory,
+  saveSettings,
   selectInputFile,
+  selectOutputDirectory,
 } from '../../api/tauri';
 import type { AppErrorDto, SelectedInputDto } from '../../api/types';
 import { LogPanel, type TaskControlState, type TaskTerminal } from '../../components/LogPanel';
@@ -27,12 +30,14 @@ import { useExtractionTask } from './useExtractionTask';
 interface AwtWorkspaceProps {
   outputDirectory: string;
   onOpenSettings: () => void;
+  onOutputDirectoryChange: (dir: string) => void;
   onTaskActiveChange: (active: boolean) => void;
 }
 
 export function AwtWorkspace({
   outputDirectory,
   onOpenSettings,
+  onOutputDirectoryChange,
   onTaskActiveChange,
 }: AwtWorkspaceProps): JSX.Element {
   const [selectedInput, setSelectedInput] = useState<SelectedInputDto | null>(null);
@@ -105,6 +110,17 @@ export function AwtWorkspace({
     } catch (error) {
       showError(error as AppErrorDto, '无法打开输出目录');
     }
+  };
+
+  const chooseNewOutput = async () => {
+    try {
+      const dir = await selectOutputDirectory();
+      if (dir) {
+        onOutputDirectoryChange(dir);
+        const current = await getSettings();
+        void saveSettings({ ...current, outputDirectory: dir }).catch(() => {});
+      }
+    } catch { /* cancelled */ }
   };
 
   const openCompletedOutput = async (outputPath: string) => {
@@ -210,7 +226,15 @@ export function AwtWorkspace({
           size="compact-sm"
           variant="subtle"
         >
-          打开输出目录
+          打开
+        </Button>
+        <Button
+          leftSection={<IconFolderOpen size={16} />}
+          onClick={() => void chooseNewOutput()}
+          size="compact-sm"
+          variant="subtle"
+        >
+          更改
         </Button>
       </footer>
     </main>

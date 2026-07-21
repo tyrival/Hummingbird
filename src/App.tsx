@@ -160,12 +160,17 @@ export default function App(): JSX.Element {
       <div style={{ display: activeWorkspace === 'awt' ? undefined : 'none' }}>
         <AwtWorkspace
           onOpenSettings={() => setSettingsOpened(true)}
+          onOutputDirectoryChange={(dir: string) => setSettings((prev) => ({ ...prev, outputDirectory: dir }))}
           onTaskActiveChange={handleTaskActiveChange}
           outputDirectory={settings.outputDirectory}
         />
       </div>
       <div style={{ display: activeWorkspace === 'log-analysis' ? undefined : 'none' }}>
-        <LogAnalysisWorkspace onOpenSettings={() => setSettingsOpened(true)} />
+        <LogAnalysisWorkspace
+          logAnalyseDir={settings.logAnalyseDir}
+          onLogAnalyseDirChange={(dir: string) => setSettings((prev) => ({ ...prev, logAnalyseDir: dir }))}
+          onOpenSettings={() => setSettingsOpened(true)}
+        />
       </div>
       <SettingsModal
         onCheckUpdate={() => {

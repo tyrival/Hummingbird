@@ -10,12 +10,10 @@ import {
   TextInput,
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { IconFolderOpen } from '@tabler/icons-react';
 import { type FormEvent, type JSX, useEffect, useState } from 'react';
 import {
   getAppVersion,
   saveSettings,
-  selectOutputDirectory,
 } from '../api/tauri';
 import type { AppErrorDto, SettingsDto } from '../api/types';
 
@@ -32,8 +30,6 @@ type EditableField =
   | 'model'
   | 'timeoutSeconds'
   | 'maxTokens'
-  | 'outputDirectory'
-  | 'logAnalyseDir'
   | 'chunkMaxChars'
   | 'contextChars';
 
@@ -80,19 +76,6 @@ function SettingsModalContent({
   useEffect(() => {
     void getAppVersion().then(setVersion).catch(() => setVersion('未知'));
   }, []);
-
-  const chooseOutput = async () => {
-    try {
-      const selected = await selectOutputDirectory();
-      if (selected) {
-        setDraft((current) => ({ ...current, outputDirectory: selected }));
-        setErrors((current) => ({ ...current, outputDirectory: undefined }));
-      }
-    } catch (error) {
-      const safeError = error as AppErrorDto;
-      notifications.show({ title: '目录选择失败', message: safeError.message, color: 'red' });
-    }
-  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -169,33 +152,6 @@ function SettingsModalContent({
               value={draft.maxTokens}
             />
           </Group>
-          <TextInput
-            error={errors.outputDirectory}
-            label="输出目录"
-            onChange={(event) => setDraft({ ...draft, outputDirectory: event.currentTarget.value })}
-            required
-            rightSection={
-              <Button
-                aria-label="浏览输出目录"
-                onClick={() => void chooseOutput()}
-                px={8}
-                size="compact-xs"
-                type="button"
-                variant="subtle"
-              >
-                <IconFolderOpen size={16} />
-              </Button>
-            }
-            rightSectionWidth={42}
-            value={draft.outputDirectory}
-          />
-          <TextInput
-            description="平台日志分析本地存储路径，留空则使用默认路径"
-            label="日志分析存储路径"
-            onChange={(event) => setDraft({ ...draft, logAnalyseDir: event.currentTarget.value })}
-            placeholder="~/Hummingbird/analyse"
-            value={draft.logAnalyseDir}
-          />
 
           <Accordion variant="separated">
             <Accordion.Item value="advanced">
@@ -281,7 +237,6 @@ function validateSettings(settings: SettingsDto): FormErrors {
   if (!settings.model.trim()) errors.model = '请输入模型名称';
   if (!isPositiveInteger(settings.timeoutSeconds)) errors.timeoutSeconds = '请输入正整数';
   if (!isPositiveInteger(settings.maxTokens)) errors.maxTokens = '请输入正整数';
-  if (!settings.outputDirectory.trim()) errors.outputDirectory = '请选择输出目录';
   if (!Number.isInteger(settings.chunkMaxChars)
     || settings.chunkMaxChars < 8000
     || settings.chunkMaxChars > 60000) {

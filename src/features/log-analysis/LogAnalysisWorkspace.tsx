@@ -9,6 +9,7 @@ import { notifications } from '@mantine/notifications';
 import {
   IconDownload,
   IconFile,
+  IconFolderOpen,
   IconServer,
   IconSettings,
 } from '@tabler/icons-react';
@@ -16,8 +17,11 @@ import { type JSX, useCallback, useEffect, useRef, useState } from 'react';
 import {
   cancelLogAnalysis,
   getAnalyseConfig,
+  getSettings,
   listenForAnalyseEvents,
   listRemoteLogs,
+  saveSettings,
+  selectAnalyseDir,
   selectLogFolder,
   startLogAnalysis,
 } from '../../api/tauri';
@@ -28,10 +32,14 @@ import { DownloadModal } from './DownloadModal';
 import { ServerListModal } from './ServerListModal';
 
 interface LogAnalysisWorkspaceProps {
+  logAnalyseDir: string;
+  onLogAnalyseDirChange: (dir: string) => void;
   onOpenSettings: () => void;
 }
 
 export function LogAnalysisWorkspace({
+  logAnalyseDir,
+  onLogAnalyseDirChange,
   onOpenSettings,
 }: LogAnalysisWorkspaceProps): JSX.Element {
   const [config, setConfig] = useState<AnalyseConfig | null>(null);
@@ -141,6 +149,17 @@ export function LogAnalysisWorkspace({
       return [...prev, ...paths.filter((p) => !existing.has(p))];
     });
   }, []);
+
+  const handleChooseAnalyseDir = useCallback(async () => {
+    try {
+      const dir = await selectAnalyseDir();
+      if (dir) {
+        onLogAnalyseDirChange(dir);
+        const current = await getSettings();
+        void saveSettings({ ...current, logAnalyseDir: dir }).catch(() => {});
+      }
+    } catch { /* cancelled */ }
+  }, [onLogAnalyseDirChange]);
 
   const handleAnalyse = useCallback(async () => {
     if (localPaths.length === 0) return;
@@ -317,6 +336,20 @@ export function LogAnalysisWorkspace({
         remoteFiles={remoteFiles}
         server={selectedServer}
       />
+      <footer className="workspace-footer">
+        <Text c="dimmed" size="xs">存储路径</Text>
+        <Text className="workspace-footer__path" ff="monospace" size="xs">
+          {logAnalyseDir || '~/Hummingbird/analyse'}
+        </Text>
+        <Button
+          leftSection={<IconFolderOpen size={16} />}
+          onClick={() => void handleChooseAnalyseDir()}
+          size="compact-sm"
+          variant="subtle"
+        >
+          更改
+        </Button>
+      </footer>
     </main>
   );
 }

@@ -139,7 +139,7 @@ export function DownloadModal({
       onClose={() => { if (!downloading) onClose(); }}
       opened={opened}
       size="md"
-      title="下载远程日志"
+      title="下载日志"
     >
       <Stack gap="sm">
         {sortedFiles.length === 0 ? (

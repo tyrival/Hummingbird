@@ -249,11 +249,11 @@ export function LogAnalysisWorkspace({
                 {remoteFiles.length > 0 && (
                   <Button
                     leftSection={<IconDownload size={16} />}
-                    miw={120}
+                    w={120}
                     onClick={handleOpenDownload}
                     variant="default"
                   >
-                    下载远程日志
+                    下载日志
                   </Button>
                 )}
               </div>

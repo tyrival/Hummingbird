@@ -234,7 +234,7 @@ export function ServerListModal({
           <TextInput
             label="应用根目录"
             onChange={(e) => setDraft({ ...draft, appRoot: e.currentTarget.value })}
-            placeholder="/home/acrel-iot-linux/service/exchange/log"
+            placeholder="/home/acrel-iot-linux/server/exchange/log"
             value={draft.appRoot}
           />
           {testResult && (

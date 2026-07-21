@@ -249,7 +249,7 @@ export function LogAnalysisWorkspace({
                 {remoteFiles.length > 0 && (
                   <Button
                     leftSection={<IconDownload size={16} />}
-                    w={120}
+                    w={140}
                     onClick={handleOpenDownload}
                     variant="default"
                   >

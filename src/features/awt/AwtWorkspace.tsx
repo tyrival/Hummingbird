@@ -190,7 +190,7 @@ export function AwtWorkspace({
             <Text c="dimmed" mt={3} size="sm">
               支持 PDF、DOCX、XLS、XLSX、CSV，DOC 请先另存为 DOCX；单个文件不超过 50 MB，也可拖入窗口。
             </Text>
-            {selectedInput && (
+            {selectedInput && !inputConsumed && (
               <div className="selected-file" data-testid="selected-file">
                 <IconFileDescription aria-hidden size={20} />
                 <div className="selected-file__details">

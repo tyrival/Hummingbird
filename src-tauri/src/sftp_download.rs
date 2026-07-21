@@ -115,7 +115,7 @@ pub fn list_remote_logs(server: &SshServerConfig) -> Result<Vec<RemoteFile>, App
         server.app_root,
         full_path.display(),
     );
-    let entries = match sftp.readdir(&full_path) {
+    let entries = match sftp.readdir(full_path) {
         Ok(e) => e,
         Err(e) => {
             eprintln!("[list_remote_logs] readdir failed: {e}");

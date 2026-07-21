@@ -232,11 +232,9 @@ pub fn save_ssh_servers(
 #[tauri::command]
 pub async fn select_analyse_dir(app: AppHandle) -> Result<String, AppError> {
     let (tx, rx) = mpsc::channel();
-    app.dialog()
-        .file()
-        .pick_folder(move |folder| {
-            let _ = tx.send(folder);
-        });
+    app.dialog().file().pick_folder(move |folder| {
+        let _ = tx.send(folder);
+    });
     let folder = rx.recv().ok().flatten();
     let Some(path) = folder else {
         return Err(AppError::new(ErrorCode::Cancelled));
@@ -248,9 +246,7 @@ pub async fn select_analyse_dir(app: AppHandle) -> Result<String, AppError> {
 }
 
 #[tauri::command]
-pub fn test_ssh_connection(
-    server: SshServerConfig,
-) -> Result<String, AppError> {
+pub fn test_ssh_connection(server: SshServerConfig) -> Result<String, AppError> {
     eprintln!(
         "[test_ssh_connection] name={} host={}:{} user={} app_root=\"{}\" has_password={} has_key={}",
         server.name,

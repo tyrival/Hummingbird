@@ -12,6 +12,7 @@ use crate::sftp_download::{RemoteFile, SshServerConfig};
 const DEFAULT_REMOTE_PATH: &str = "acrel-iot-linux/server/exchange/log";
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AnalyseConfig {
     pub log_analyse_dir: String,
     pub ssh_servers: Vec<SshServerConfig>,
@@ -25,7 +26,12 @@ impl AnalyseConfig {
             ssh_servers: Vec::new(),
             remote_relative_path: DEFAULT_REMOTE_PATH.to_string(),
         };
-        if let Some(config_path) = find_config_txt() {
+        let config_path = find_config_txt();
+        eprintln!(
+            "[AnalyseConfig::load] find_config_txt() = {:?}",
+            config_path.as_ref().map(|p| p.display().to_string())
+        );
+        if let Some(config_path) = config_path {
             if let Ok(content) = std::fs::read_to_string(&config_path) {
                 for line in content.lines() {
                     let line = line.trim();
@@ -47,10 +53,17 @@ impl AnalyseConfig {
                                 };
                             }
                             "SSH_SERVERS" if !value.is_empty() => {
-                                if let Ok(servers) =
-                                    crate::sftp_download::parse_servers_from_config(value)
-                                {
-                                    config.ssh_servers = servers;
+                                match crate::sftp_download::parse_servers_from_config(value) {
+                                    Ok(servers) => {
+                                        eprintln!(
+                                            "[AnalyseConfig::load] loaded {} SSH servers",
+                                            servers.len()
+                                        );
+                                        config.ssh_servers = servers;
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[AnalyseConfig::load] SSH_SERVERS parse error: {:?}", e);
+                                    }
                                 }
                             }
                             "LOG_REMOTE_RELATIVE_PATH" if !value.is_empty() => {
@@ -228,7 +241,16 @@ pub fn save_ssh_servers(
 pub fn test_ssh_connection(
     server: SshServerConfig,
 ) -> Result<String, AppError> {
-    // Just list the log directory to verify connection
+    eprintln!(
+        "[test_ssh_connection] name={} host={}:{} user={} app_root=\"{}\" has_password={} has_key={}",
+        server.name,
+        server.host,
+        server.port,
+        server.user,
+        server.app_root,
+        server.password.is_some(),
+        server.private_key.is_some(),
+    );
     crate::sftp_download::list_remote_logs(&server, DEFAULT_REMOTE_PATH)?;
     Ok(format!("成功连接到 {}", server.name))
 }
@@ -338,5 +360,25 @@ pub async fn select_log_folder(app: AppHandle) -> Result<Vec<String>, AppError> 
         }
     }
     Ok(files)
+}
+
+#[tauri::command]
+pub async fn select_key_file(app: AppHandle) -> Result<String, AppError> {
+    let (tx, rx) = mpsc::channel();
+    app.dialog()
+        .file()
+        .add_filter("PEM 密钥", &["pem", "key", ""])
+        .pick_file(move |file| {
+            let _ = tx.send(file);
+        });
+    let file = rx.recv().ok().flatten();
+    let Some(path) = file else {
+        return Err(AppError::new(ErrorCode::Cancelled));
+    };
+    let path_buf = path
+        .into_path()
+        .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
+    std::fs::read_to_string(&path_buf)
+        .map_err(|_| AppError::new(ErrorCode::FileNotFound))
 }
 

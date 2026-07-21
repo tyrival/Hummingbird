@@ -174,7 +174,7 @@ pub fn parse_log_file(path: &Path) -> Result<(String, usize, Vec<LogEntry>), App
     }
 
     let text = decode_log_bytes(&raw);
-    let total_lines = text.lines().filter(|l| !l.trim().is_empty()).count();
+    let _total_lines = text.lines().filter(|l| !l.trim().is_empty()).count();
     let entries = parse_log_text(&text)?;
     let count = entries.len();
     Ok((file_name.into_owned(), count, entries))

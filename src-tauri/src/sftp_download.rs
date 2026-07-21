@@ -11,6 +11,7 @@ use tokio_util::sync::CancellationToken;
 use crate::error::{AppError, ErrorCode};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SshServerConfig {
     pub name: String,
     pub host: String,
@@ -18,8 +19,9 @@ pub struct SshServerConfig {
     pub user: String,
     #[serde(default)]
     pub password: Option<String>,
-    #[serde(default)]
+    #[serde(default, alias = "private_key")]
     pub private_key: Option<String>,
+    #[serde(default, alias = "app_root")]
     pub app_root: String,
 }
 
@@ -64,16 +66,28 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
         .handshake()
         .map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
 
-    if let Some(password) = &server.password {
-        session
-            .userauth_password(&server.user, password)
-            .map_err(|_| AppError::new(ErrorCode::AuthenticationFailed))?;
-    } else if let Some(key) = &server.private_key {
-        session
-            .userauth_pubkey_memory(&server.user, None, key, None)
-            .map_err(|_| AppError::new(ErrorCode::AuthenticationFailed))?;
-    } else {
-        return Err(AppError::new(ErrorCode::AuthenticationFailed));
+    // Try key first if available, then fall back to password.
+    // Both can be present — key takes precedence.
+    let mut authenticated = false;
+    if let Some(key) = &server.private_key {
+        eprintln!("[connect_session] trying pubkey auth for user={}", server.user);
+        if let Ok(()) = session.userauth_pubkey_memory(&server.user, None, key, None) {
+            eprintln!("[connect_session] pubkey auth succeeded");
+            authenticated = true;
+        } else {
+            eprintln!("[connect_session] pubkey auth failed, falling back");
+        }
+    }
+    if !authenticated {
+        if let Some(_password) = &server.password {
+            eprintln!("[connect_session] trying password auth for user={}", server.user);
+            session
+                .userauth_password(&server.user, _password)
+                .map_err(|_| AppError::new(ErrorCode::AuthenticationFailed))?;
+            eprintln!("[connect_session] password auth succeeded");
+        } else if !authenticated {
+            return Err(AppError::new(ErrorCode::AuthenticationFailed));
+        }
     }
 
     if !session.authenticated() {
@@ -94,9 +108,19 @@ pub fn list_remote_logs(
         .map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
 
     let full_path = Path::new(&server.app_root).join(relative_path);
-    let entries = sftp
-        .readdir(&full_path)
-        .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
+    eprintln!(
+        "[list_remote_logs] app_root=\"{}\" relative=\"{}\" full_path=\"{}\"",
+        server.app_root,
+        relative_path,
+        full_path.display(),
+    );
+    let entries = match sftp.readdir(&full_path) {
+        Ok(e) => e,
+        Err(e) => {
+            eprintln!("[list_remote_logs] readdir failed: {e}");
+            return Err(AppError::new(ErrorCode::FileNotFound));
+        }
+    };
 
     let mut files = Vec::new();
     for (path, stat) in entries {

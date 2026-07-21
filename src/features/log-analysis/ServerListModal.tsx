@@ -8,9 +8,9 @@ import {
   Text,
   TextInput,
 } from '@mantine/core';
-import { IconEdit, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
+import { IconEdit, IconFile, IconPlus, IconSearch, IconTrash } from '@tabler/icons-react';
 import { type JSX, useCallback, useMemo, useState } from 'react';
-import { saveSshServers, testSshConnection } from '../../api/tauri';
+import { saveSshServers, selectKeyFile, testSshConnection } from '../../api/tauri';
 import type { SshServerConfig } from '../../api/types';
 
 interface ServerListModalProps {
@@ -21,10 +21,8 @@ interface ServerListModalProps {
   onServersChange: (servers: SshServerConfig[]) => void;
 }
 
-type AuthMode = 'password' | 'key';
-
 function emptyServer(): SshServerConfig {
-  return { name: '', host: '', port: 22, user: 'root', password: '', appRoot: '' };
+  return { name: '', host: '', port: 22, user: 'root', password: '', appRoot: '/home/acrel-iot-linux' };
 }
 
 export function ServerListModal({
@@ -37,9 +35,9 @@ export function ServerListModal({
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<SshServerConfig | null>(null);
   const [draft, setDraft] = useState<SshServerConfig>(emptyServer());
-  const [authMode, setAuthMode] = useState<AuthMode>('password');
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<string | null>(null);
+  const [keyFileName, setKeyFileName] = useState('');
 
   const resetForm = useCallback(() => {
     setSearch('');
@@ -58,8 +56,8 @@ export function ServerListModal({
   const startEdit = useCallback((s?: SshServerConfig) => {
     const server = s ?? emptyServer();
     setEditing(server);
-    setDraft({ ...server, password: '', privateKey: '' });
-    setAuthMode(server.privateKey ? 'key' : 'password');
+    setDraft({ ...server, privateKey: '' });
+    setKeyFileName('');
     setTestResult(null);
   }, []);
 
@@ -67,22 +65,14 @@ export function ServerListModal({
     const name = draft.name.trim();
     const host = draft.host.trim();
     if (!name || !host) return;
-    const cred = authMode === 'password'
-      ? { password: draft.password || undefined, privateKey: undefined }
-      : { privateKey: draft.privateKey || undefined, password: undefined };
-    const updated: SshServerConfig = {
-      ...draft,
-      name,
-      host,
-      ...cred,
-    };
+    const updated: SshServerConfig = { ...draft, name, host };
     const list = editing?.name
       ? servers.map((s) => (s.name === editing.name ? updated : s))
       : [...servers, updated];
     const saved = await saveSshServers(list);
     onServersChange(saved);
     setEditing(null);
-  }, [draft, authMode, editing, servers, onServersChange]);
+  }, [draft, editing, servers, onServersChange]);
 
   const deleteServer = useCallback(async (name: string) => {
     const updated = servers.filter((s) => s.name !== name);
@@ -102,6 +92,16 @@ export function ServerListModal({
       setTesting(false);
     }
   }, [draft]);
+
+  const handlePickKeyFile = useCallback(async () => {
+    try {
+      const content = await selectKeyFile();
+      setDraft((prev) => ({ ...prev, privateKey: content }));
+      setKeyFileName(content ? '(已选择)' : '');
+    } catch {
+      // user cancelled
+    }
+  }, []);
 
   return (
     <Modal
@@ -200,43 +200,43 @@ export function ServerListModal({
             placeholder="root"
             value={draft.user}
           />
+          <PasswordInput
+            label="密码"
+            onChange={(e) => setDraft({ ...draft, password: e.currentTarget.value })}
+            placeholder="(留空则不修改)"
+            value={draft.password ?? ''}
+          />
+          <Stack gap={4}>
+            <Text size="sm" fw={500}>SSH 私钥 (PEM)</Text>
+            {draft.privateKey ? (
+              <Group gap="xs">
+                <Text c="teal" size="sm" style={{ flex: 1 }} truncate>
+                  {keyFileName || '已选择密钥文件'}
+                </Text>
+                <Button
+                  onClick={handlePickKeyFile}
+                  size="compact-sm"
+                  variant="default"
+                >
+                  重新选择
+                </Button>
+              </Group>
+            ) : (
+              <Button
+                leftSection={<IconFile size={16} />}
+                onClick={handlePickKeyFile}
+                variant="default"
+              >
+                选择密钥文件
+              </Button>
+            )}
+          </Stack>
           <TextInput
             label="应用根目录"
             onChange={(e) => setDraft({ ...draft, appRoot: e.currentTarget.value })}
             placeholder="/home/acrel-iot-linux"
             value={draft.appRoot}
           />
-          <Group gap={4} mb={0}>
-            <Button
-              onClick={() => setAuthMode('password')}
-              size="xs"
-              variant={authMode === 'password' ? 'filled' : 'default'}
-            >
-              密码
-            </Button>
-            <Button
-              onClick={() => setAuthMode('key')}
-              size="xs"
-              variant={authMode === 'key' ? 'filled' : 'default'}
-            >
-              密钥
-            </Button>
-          </Group>
-          {authMode === 'password' ? (
-            <PasswordInput
-              label="密码"
-              onChange={(e) => setDraft({ ...draft, password: e.currentTarget.value })}
-              placeholder="(留空则不修改)"
-              value={draft.password ?? ''}
-            />
-          ) : (
-            <TextInput
-              label="SSH 私钥 (PEM)"
-              onChange={(e) => setDraft({ ...draft, privateKey: e.currentTarget.value })}
-              placeholder="(留空则不修改)"
-              value={draft.privateKey ?? ''}
-            />
-          )}
           {testResult && (
             <Text c={testResult.startsWith('连接失败') ? 'red' : 'teal'} size="sm">
               {testResult}

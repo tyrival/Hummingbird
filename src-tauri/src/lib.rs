@@ -94,6 +94,7 @@ pub fn run() {
             analyse_commands::cancel_log_analysis,
             analyse_commands::get_analyse_status,
             analyse_commands::select_log_folder,
+            analyse_commands::select_key_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hummingbird application");

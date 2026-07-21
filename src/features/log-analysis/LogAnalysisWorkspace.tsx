@@ -1,5 +1,4 @@
 import {
-  Badge,
   Button,
   Card,
   Group,
@@ -16,7 +15,6 @@ import {
 import { type JSX, useCallback, useEffect, useRef, useState } from 'react';
 import {
   cancelLogAnalysis,
-  downloadLogs,
   getAnalyseConfig,
   listenForAnalyseEvents,
   listRemoteLogs,
@@ -26,6 +24,7 @@ import {
 import type { AnalyseConfig, AnalyseEvent, LogSummary, RemoteFile, SshServerConfig, TimeBucket } from '../../api/types';
 import { LogPanel, type TaskControlState, type TaskTerminal } from '../../components/LogPanel';
 import { AnalysisResults } from './AnalysisResults';
+import { DownloadModal } from './DownloadModal';
 import { ServerListModal } from './ServerListModal';
 
 interface LogAnalysisWorkspaceProps {
@@ -37,10 +36,10 @@ export function LogAnalysisWorkspace({
 }: LogAnalysisWorkspaceProps): JSX.Element {
   const [config, setConfig] = useState<AnalyseConfig | null>(null);
   const [serverModalOpen, setServerModalOpen] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [selectedServer, setSelectedServer] = useState<SshServerConfig | null>(null);
   const [remoteFiles, setRemoteFiles] = useState<RemoteFile[]>([]);
   const [localPaths, setLocalPaths] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
   const [analysisComplete, setAnalysisComplete] = useState(false);
   const [progressPct, setProgressPct] = useState(0);
@@ -51,7 +50,6 @@ export function LogAnalysisWorkspace({
 
   const unlistenRef = useRef<(() => void) | null>(null);
   const mountedRef = useRef(false);
-  const logIdRef = useRef(0);
 
   useEffect(() => {
     void getAnalyseConfig().then(setConfig);
@@ -111,7 +109,6 @@ export function LogAnalysisWorkspace({
   const handleSelectServer = useCallback(async (server: SshServerConfig) => {
     setSelectedServer(server);
     setServerModalOpen(false);
-    setLoading(true);
     try {
       const files = await listRemoteLogs(server);
       setRemoteFiles(files);
@@ -122,8 +119,6 @@ export function LogAnalysisWorkspace({
         color: 'red',
       });
       setSelectedServer(null);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -136,28 +131,16 @@ export function LogAnalysisWorkspace({
     } catch { /* cancelled */ }
   }, []);
 
-  const handleDownload = useCallback(async () => {
-    if (!selectedServer) return;
-    setLoading(true);
-    try {
-      const filenames = remoteFiles.map((f) => f.name);
-      const paths = await downloadLogs(selectedServer, filenames);
-      setLocalPaths((prev) => [...prev, ...paths]);
-      notifications.show({
-        title: '下载完成',
-        message: `已下载 ${paths.length} 个文件`,
-        color: 'teal',
-      });
-    } catch (e: unknown) {
-      notifications.show({
-        title: '下载失败',
-        message: (e as { message?: string }).message ?? '请检查连接和路径',
-        color: 'red',
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedServer, remoteFiles]);
+  const handleOpenDownload = useCallback(() => {
+    setDownloadModalOpen(true);
+  }, []);
+
+  const handleDownloaded = useCallback((paths: string[]) => {
+    setLocalPaths((prev) => {
+      const existing = new Set(prev);
+      return [...prev, ...paths.filter((p) => !existing.has(p))];
+    });
+  }, []);
 
   const handleAnalyse = useCallback(async () => {
     if (localPaths.length === 0) return;
@@ -166,7 +149,6 @@ export function LogAnalysisWorkspace({
     setHeatmap([]);
     setAnalysisComplete(false);
     setTaskLogs([]);
-    logIdRef.current = 0;
     try {
       await startLogAnalysis(localPaths);
     } catch (e: unknown) {
@@ -237,7 +219,7 @@ export function LogAnalysisWorkspace({
               SSH 连接远程服务器获取日志，或直接选择本地 .log 文件。支持 .gz 压缩包自动解压。
             </Text>
             {selectedServer && (
-              <div className="selected-file" data-testid="selected-server">
+              <div className="selected-file" data-testid="selected-server" style={{ marginTop: 8 }}>
                 <IconServer aria-hidden size={20} />
                 <div className="selected-file__details">
                   <Text fw={600} lineClamp={1} size="sm">{selectedServer.name}</Text>
@@ -246,9 +228,14 @@ export function LogAnalysisWorkspace({
                   </Text>
                 </div>
                 {remoteFiles.length > 0 && (
-                  <Badge color="gray" style={{ flexShrink: 0 }} variant="light">
-                    {remoteFiles.length} 文件
-                  </Badge>
+                  <Button
+                    leftSection={<IconDownload size={16} />}
+                    miw={120}
+                    onClick={handleOpenDownload}
+                    variant="default"
+                  >
+                    下载远程日志
+                  </Button>
                 )}
               </div>
             )}
@@ -290,22 +277,6 @@ export function LogAnalysisWorkspace({
             </Button>
           </Group>
         </Group>
-        {selectedServer && remoteFiles.length > 0 && (
-          <Group mt="sm">
-            <Button
-              leftSection={<IconDownload size={16} />}
-              loading={loading}
-              miw={120}
-              onClick={handleDownload}
-              size="compact-sm"
-            >
-              下载远程日志
-            </Button>
-            <Text c="dimmed" size="xs">
-              共 {remoteFiles.length} 个文件，{formatBytes(remoteFiles.reduce((s, f) => s + f.sizeBytes, 0))}
-            </Text>
-          </Group>
-        )}
       </Card>
 
       {analysisComplete && aiReports.length > 0 ? (
@@ -317,8 +288,8 @@ export function LogAnalysisWorkspace({
       ) : (
         <LogPanel
           buttonLabel="开始分析"
-          entries={taskLogs.map((msg) => ({
-            id: logIdRef.current++,
+          entries={taskLogs.map((msg, i) => ({
+            id: i,
             timestamp: '',
             level: 'info' as const,
             message: msg,
@@ -338,6 +309,14 @@ export function LogAnalysisWorkspace({
         opened={serverModalOpen}
         servers={config?.sshServers ?? []}
       />
+      <DownloadModal
+        key={selectedServer?.name ?? '__none__'}
+        onClose={() => setDownloadModalOpen(false)}
+        onDownloaded={handleDownloaded}
+        opened={downloadModalOpen}
+        remoteFiles={remoteFiles}
+        server={selectedServer}
+      />
     </main>
   );
 }
@@ -349,10 +328,4 @@ function getStageLabel(stage: string): string {
     ai_analysis: 'AI 分析',
   };
   return map[stage] ?? stage;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

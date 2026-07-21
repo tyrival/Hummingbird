@@ -180,6 +180,9 @@ export const getAnalyseStatus = (): Promise<AnalyseStatus> =>
 export const selectLogFolder = (): Promise<string[]> =>
   invokeCommand<string[]>('select_log_folder');
 
+export const selectKeyFile = (): Promise<string> =>
+  invokeCommand<string>('select_key_file');
+
 export async function listenForAnalyseEvents(
   listener: (event: AnalyseEvent) => void,
 ): Promise<UnlistenFn> {

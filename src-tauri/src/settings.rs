@@ -37,6 +37,7 @@ pub struct Settings {
     pub chunk_max_chars: usize,
     pub context_chars: usize,
     pub last_input_dir: Option<String>,
+    pub log_analyse_dir: String,
 }
 
 impl std::fmt::Debug for Settings {
@@ -54,6 +55,7 @@ impl std::fmt::Debug for Settings {
             .field("chunk_max_chars", &self.chunk_max_chars)
             .field("context_chars", &self.context_chars)
             .field("last_input_dir", &self.last_input_dir)
+            .field("log_analyse_dir", &self.log_analyse_dir)
             .finish()
     }
 }
@@ -72,6 +74,7 @@ impl Default for Settings {
             chunk_max_chars: DEFAULT_CHUNK_MAX_CHARS,
             context_chars: DEFAULT_CONTEXT_CHARS,
             last_input_dir: None,
+            log_analyse_dir: String::new(),
         }
     }
 }
@@ -346,6 +349,14 @@ fn apply_legacy_values(
                 };
             }
             "LAST_INPUT_DIR" if !value.is_empty() => settings.last_input_dir = Some(value.into()),
+            "LOG_ANALYSE_DIR" if !value.is_empty() => {
+                let path = Path::new(value);
+                settings.log_analyse_dir = if path.is_absolute() {
+                    path.to_string_lossy().into_owned()
+                } else {
+                    output_base_dir.join(path).to_string_lossy().into_owned()
+                };
+            }
             _ => {}
         }
     }

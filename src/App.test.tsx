@@ -14,9 +14,11 @@ vi.mock('./api/tauri', () => ({
   destroyMainWindow: vi.fn(),
   downloadUpdate: vi.fn(),
   installDownloadedUpdate: vi.fn(),
+  getAnalyseConfig: vi.fn(),
   getAppVersion: vi.fn(),
   getSettings: vi.fn(),
   getTaskStatus: vi.fn(),
+  listenForAnalyseEvents: vi.fn(),
   listenForCloseRequests: vi.fn(),
   listenForInputDropResults: vi.fn(),
   listenForTaskEvents: vi.fn(),
@@ -36,7 +38,7 @@ const settings: SettingsDto = {
   schemaVersion: 1,
   migrationVersion: 2,
   baseUrl: 'https://api.example.test/v1',
-  apiKey: 'secret',
+  apiKey: 'test-key-12345',
   model: 'deepseek-chat',
   timeoutSeconds: 600,
   maxTokens: 16384,
@@ -44,6 +46,7 @@ const settings: SettingsDto = {
   chunkMaxChars: 12000,
   contextChars: 1500,
   lastInputDir: '/private/input',
+  logAnalyseDir: '',
 };
 
 type CloseEvent = { preventDefault: () => void };
@@ -96,31 +99,35 @@ describe('application shell', () => {
     api.listenForInputDropResults.mockResolvedValue(() => undefined);
     api.listenForTaskEvents.mockResolvedValue(() => undefined);
     api.listenForUpdateDownloadEvents.mockResolvedValue(() => undefined);
+    api.listenForAnalyseEvents.mockResolvedValue(() => undefined);
+    api.getAnalyseConfig.mockResolvedValue({
+      logAnalyseDir: '/tmp',
+      sshServers: [],
+      remoteRelativePath: 'acrel-iot-linux/server/exchange/log',
+    });
   });
 
   it('renders labeled rounded navigation and changes the selected workspace', async () => {
     renderApp();
 
     const awt = screen.getByRole('button', { name: 'AWT模板生成' });
-    const passthrough = screen.getByRole('button', { name: '平台日志分析' });
+    const anl = screen.getByRole('button', { name: '平台日志分析Beta' });
     expect(awt).toHaveTextContent('AWT模板生成');
-    expect(passthrough).toHaveTextContent('平台日志分析');
+    expect(anl).toHaveTextContent('平台日志分析Beta');
     expect(awt).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'AWT模板生成' })).toBeInTheDocument();
 
-    fireEvent.click(passthrough);
-    expect(passthrough).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(anl);
+    expect(anl).toHaveAttribute('aria-current', 'page');
     expect(awt).not.toHaveAttribute('aria-current');
   });
 
-  it('shows a truly empty semantic passthrough workspace', () => {
+  it('renders the log analysis workspace with server controls', async () => {
     renderApp();
-    fireEvent.click(screen.getByRole('button', { name: '平台日志分析' }));
+    fireEvent.click(screen.getByRole('button', { name: '平台日志分析Beta' }));
 
-    const workspace = screen.getByRole('main', { name: '平台日志分析' });
-    expect(screen.getAllByRole('main')).toHaveLength(1);
-    expect(workspace).toBeEmptyDOMElement();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '服务器列表' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '选择本地文件夹' })).toBeInTheDocument();
   });
 
   it('loads settings, opens the settings modal and reflects a saved output directory', async () => {

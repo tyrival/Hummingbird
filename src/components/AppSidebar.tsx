@@ -1,11 +1,11 @@
 import {
-  IconFileDescription,
+  IconChartHistogram,
   IconRefresh,
   IconTemplate,
 } from '@tabler/icons-react';
 import type { JSX } from 'react';
 
-export type Workspace = 'awt' | 'passthrough';
+export type Workspace = 'awt' | 'log-analysis';
 
 interface AppSidebarProps {
   activeWorkspace: Workspace;
@@ -17,7 +17,7 @@ interface AppSidebarProps {
 
 const items = [
   { id: 'awt' as const, label: 'AWT模板生成', icon: IconTemplate },
-  { id: 'passthrough' as const, label: '平台日志分析', icon: IconFileDescription },
+  { id: 'log-analysis' as const, label: '平台日志分析Beta', icon: IconChartHistogram },
 ];
 
 export function AppSidebar({

@@ -48,6 +48,21 @@ impl AiClient {
         })
     }
 
+    pub async fn chat(
+        &self,
+        system_prompt: &str,
+        user_prompt: &str,
+        cancellation: &CancellationToken,
+    ) -> Result<String, AppError> {
+        match self
+            .request_once(system_prompt, user_prompt, cancellation)
+            .await
+        {
+            Ok(text) => Ok(text),
+            Err(AttemptError::Final(e)) | Err(AttemptError::Retryable(e)) => Err(e),
+        }
+    }
+
     pub async fn extract_chunk(
         &self,
         system_prompt: &str,

@@ -50,6 +50,7 @@ describe('Tauri adapter', () => {
       chunkMaxChars: 12000,
       contextChars: 1500,
       lastInputDir: null,
+      logAnalyseDir: '',
     };
     mockedInvoke.mockResolvedValue(settings);
 
@@ -114,6 +115,7 @@ describe('Tauri adapter', () => {
       chunkMaxChars: 12000,
       contextChars: 1500,
       lastInputDir: null,
+      logAnalyseDir: '',
     } satisfies SettingsDto;
     mockedInvoke.mockResolvedValue(undefined);
 

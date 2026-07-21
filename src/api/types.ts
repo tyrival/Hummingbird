@@ -70,6 +70,7 @@ export interface SettingsDto {
   chunkMaxChars: number;
   contextChars: number;
   lastInputDir: string | null;
+  logAnalyseDir: string;
 }
 
 export interface SelectedInputDto {
@@ -99,3 +100,80 @@ export type UpdateDownloadEvent =
 
 export type UpdateDownloadResult = 'downloaded' | 'opened_release_page';
 export type UpdateInstallResult = 'installed';
+
+// ── Log Analysis ─────────────────────────────────────────────
+
+export interface SshServerConfig {
+  name: string;
+  host: string;
+  port: number;
+  user: string;
+  password?: string;
+  privateKey?: string;
+  appRoot: string;
+}
+
+export interface AnalyseConfig {
+  logAnalyseDir: string;
+  sshServers: SshServerConfig[];
+  remoteRelativePath: string;
+}
+
+export interface RemoteFile {
+  name: string;
+  path: string;
+  sizeBytes: number;
+  modified: number;
+}
+
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
+export interface LogSummary {
+  totalLines: number;
+  entryCount: number;
+  timeStart: string | null;
+  timeEnd: string | null;
+  categoryCounts: CategoryCount[];
+  uniqueSns: string[];
+  uniqueProjects: string[];
+  connectionLeaks: number;
+  dispatchDisabledRules: string[];
+  threadCount: number;
+  snErrors: SnErrorCount[];
+}
+
+export interface SnErrorCount {
+  sn: string;
+  errorType: string;
+  count: number;
+}
+
+export interface TimeBucket {
+  hour: string;
+  count: number;
+}
+
+export interface ThreadStuckInfo {
+  thread: string;
+  startTime: string;
+  endTime: string;
+  durationMs: number;
+}
+
+export interface AnalyseStatus {
+  active: boolean;
+  stage: string | null;
+  progressPct: number;
+  detail: string;
+}
+
+export type AnalyseEvent =
+  | { type: 'stage'; taskId: string; stage: string }
+  | { type: 'progress'; taskId: string; completed: number; total: number; detail: string }
+  | { type: 'ai_chunk'; taskId: string; batch: number; content: string }
+  | { type: 'completed'; taskId: string; summaryJson: string; heatmapJson: string }
+  | { type: 'cancelled'; taskId: string }
+  | { type: 'failed'; taskId: string; error: AppErrorDto };

@@ -25,6 +25,7 @@ const settings: SettingsDto = {
   chunkMaxChars: 12000,
   contextChars: 1500,
   lastInputDir: '/private/last-input',
+  logAnalyseDir: '/tmp/analyse',
 };
 
 function renderModal(onSaved = vi.fn(), onCheckUpdate = vi.fn()) {

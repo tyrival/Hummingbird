@@ -246,7 +246,7 @@ impl CommandState {
             .unwrap_or_else(std::sync::PoisonError::into_inner)
     }
 
-    fn settings(&self) -> Settings {
+    pub(crate) fn settings(&self) -> Settings {
         self.session().settings.clone()
     }
 

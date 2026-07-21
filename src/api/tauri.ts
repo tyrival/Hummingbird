@@ -135,3 +135,53 @@ export async function listenForCloseRequests(
 export async function destroyMainWindow(): Promise<void> {
   await getCurrentWindow().destroy();
 }
+
+// ── Log Analysis ─────────────────────────────────────────────
+
+import type {
+  AnalyseConfig,
+  AnalyseEvent,
+  AnalyseStatus,
+  RemoteFile,
+  SshServerConfig,
+} from './types';
+
+export const getAnalyseConfig = (): Promise<AnalyseConfig> =>
+  invokeCommand<AnalyseConfig>('get_analyse_config');
+
+export const saveSshServers = (servers: SshServerConfig[]): Promise<SshServerConfig[]> =>
+  invokeCommand<SshServerConfig[]>('save_ssh_servers', { servers });
+
+export const testSshConnection = (server: SshServerConfig): Promise<string> =>
+  invokeCommand<string>('test_ssh_connection', { server });
+
+export const listRemoteLogs = (
+  server: SshServerConfig,
+  relativePath?: string,
+): Promise<RemoteFile[]> =>
+  invokeCommand<RemoteFile[]>('list_remote_logs_command', { server, relativePath });
+
+export const downloadLogs = (
+  server: SshServerConfig,
+  remoteFiles: string[],
+  relativePath?: string,
+): Promise<string[]> =>
+  invokeCommand<string[]>('download_logs_command', { server, remoteFiles, relativePath });
+
+export const startLogAnalysis = (filePaths: string[]): Promise<void> =>
+  invokeCommand<void>('start_log_analysis', { filePaths });
+
+export const cancelLogAnalysis = (): Promise<void> =>
+  invokeCommand<void>('cancel_log_analysis');
+
+export const getAnalyseStatus = (): Promise<AnalyseStatus> =>
+  invokeCommand<AnalyseStatus>('get_analyse_status');
+
+export const selectLogFolder = (): Promise<string[]> =>
+  invokeCommand<string[]>('select_log_folder');
+
+export async function listenForAnalyseEvents(
+  listener: (event: AnalyseEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<AnalyseEvent>('analyse-event', ({ payload }) => listener(payload));
+}

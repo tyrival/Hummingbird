@@ -33,6 +33,7 @@ type EditableField =
   | 'timeoutSeconds'
   | 'maxTokens'
   | 'outputDirectory'
+  | 'logAnalyseDir'
   | 'chunkMaxChars'
   | 'contextChars';
 
@@ -187,6 +188,13 @@ function SettingsModalContent({
             }
             rightSectionWidth={42}
             value={draft.outputDirectory}
+          />
+          <TextInput
+            description="平台日志分析本地存储路径，留空则使用默认路径"
+            label="日志分析存储路径"
+            onChange={(event) => setDraft({ ...draft, logAnalyseDir: event.currentTarget.value })}
+            placeholder="~/Hummingbird/analyse"
+            value={draft.logAnalyseDir}
           />
 
           <Accordion variant="separated">

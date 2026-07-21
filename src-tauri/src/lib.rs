@@ -1,15 +1,21 @@
 use tauri::{Emitter, Manager};
 
 pub mod ai;
+pub mod analyse_commands;
+pub mod analyse_task;
 pub mod chunking;
 pub mod commands;
+pub mod crypto;
 pub mod error;
 pub mod extraction;
+pub mod log_parse;
+pub mod log_stats;
 pub mod naming;
 pub mod output;
 pub mod prompt;
 pub mod register_csv;
 pub mod settings;
+pub mod sftp_download;
 pub mod task;
 pub mod updater;
 
@@ -25,6 +31,9 @@ pub fn run() {
             let staging_root = app.path().app_data_dir()?.join("input-staging");
             app.manage(commands::CommandState::production(settings, staging_root));
             app.manage(updater::SignedUpdateState::default());
+            app.manage(analyse_commands::AnalyseAppState {
+                task_manager: analyse_task::AnalyseTaskManager::new(),
+            });
             if let Some(window) = app.get_webview_window("main") {
                 let app_handle = app.handle().clone();
                 window.on_window_event(move |event| {
@@ -76,6 +85,15 @@ pub fn run() {
             updater::download_update,
             updater::install_downloaded_update,
             updater::relaunch_app,
+            analyse_commands::get_analyse_config,
+            analyse_commands::save_ssh_servers,
+            analyse_commands::test_ssh_connection,
+            analyse_commands::list_remote_logs_command,
+            analyse_commands::download_logs_command,
+            analyse_commands::start_log_analysis,
+            analyse_commands::cancel_log_analysis,
+            analyse_commands::get_analyse_status,
+            analyse_commands::select_log_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hummingbird application");

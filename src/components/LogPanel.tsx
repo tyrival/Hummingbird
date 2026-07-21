@@ -40,6 +40,7 @@ interface LogPanelProps {
   task: TaskControlState;
   onStartStop: () => void;
   onOpenOutput?: (path: string) => void;
+  buttonLabel?: string;
 }
 
 const stageLabels: Record<TaskStage, string> = {
@@ -103,6 +104,7 @@ export function LogPanel({
   task,
   onStartStop,
   onOpenOutput,
+  buttonLabel,
 }: LogPanelProps): JSX.Element {
   const visibleEntries = entries.slice(-500);
 
@@ -118,7 +120,7 @@ export function LogPanel({
             size="compact-sm"
             variant="filled"
           >
-            {task.active ? '停止' : '开始提取'}
+            {task.active ? '停止' : (buttonLabel ?? '开始提取')}
           </Button>
           {task.terminal ? (
             terminalSummary(task.terminal, onOpenOutput)

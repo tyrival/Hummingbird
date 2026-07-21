@@ -13,13 +13,13 @@ import { AppSidebar, type Workspace } from './components/AppSidebar';
 import { SettingsModal } from './components/SettingsModal';
 import { UpdateModal } from './components/UpdateModal';
 import { AwtWorkspace } from './features/awt/AwtWorkspace';
-import { PassthroughWorkspace } from './features/passthrough/PassthroughWorkspace';
+import { LogAnalysisWorkspace } from './features/log-analysis/LogAnalysisWorkspace';
 
 const initialSettings: SettingsDto = {
   schemaVersion: 1,
   migrationVersion: 2,
   baseUrl: 'http://192.168.32.20:3000/v1',
-  apiKey: '',
+  apiKey: '***',
   model: 'deepseek-chat',
   timeoutSeconds: 600,
   maxTokens: 16384,
@@ -27,6 +27,7 @@ const initialSettings: SettingsDto = {
   chunkMaxChars: 12000,
   contextChars: 1500,
   lastInputDir: null,
+  logAnalyseDir: '',
 };
 
 export default function App(): JSX.Element {
@@ -156,15 +157,16 @@ export default function App(): JSX.Element {
         onWorkspaceChange={setActiveWorkspace}
         taskActive={taskActive}
       />
-      {activeWorkspace === 'awt' ? (
+      <div style={{ display: activeWorkspace === 'awt' ? undefined : 'none' }}>
         <AwtWorkspace
           onOpenSettings={() => setSettingsOpened(true)}
           onTaskActiveChange={handleTaskActiveChange}
           outputDirectory={settings.outputDirectory}
         />
-      ) : (
-        <PassthroughWorkspace />
-      )}
+      </div>
+      <div style={{ display: activeWorkspace === 'log-analysis' ? undefined : 'none' }}>
+        <LogAnalysisWorkspace onOpenSettings={() => setSettingsOpened(true)} />
+      </div>
       <SettingsModal
         onCheckUpdate={() => {
           setSettingsOpened(false);

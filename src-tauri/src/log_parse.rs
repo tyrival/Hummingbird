@@ -18,9 +18,8 @@ static LOG_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-static STACK_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^\t(at |Caused by:|\.\.\.\d+ more)").unwrap()
-});
+static STACK_LINE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\t(at |Caused by:|\.\.\.\d+ more)").unwrap());
 
 static SN_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b(\d{14,})\b").unwrap());
 static DISPATCH_COST_RE: LazyLock<Regex> =
@@ -72,8 +71,7 @@ pub fn parse_log_line(line: &str) -> Option<LogEntry> {
 }
 
 pub fn is_stack_line(line: &str) -> bool {
-    STACK_LINE_RE.is_match(line)
-        || (!line.starts_with("202") && line.starts_with('\t'))
+    STACK_LINE_RE.is_match(line) || (!line.starts_with("202") && line.starts_with('\t'))
 }
 
 pub fn categorize_entry(entry: &LogEntry) -> ErrorCategory {
@@ -94,9 +92,7 @@ pub fn categorize_entry(entry: &LogEntry) -> ErrorCategory {
         || msg.contains("disabled ruleId=")
     {
         ErrorCategory::DispatchDisabled
-    } else if cls.contains("ComposeHandler")
-        || msg.contains("未包含协议网关转换规则")
-    {
+    } else if cls.contains("ComposeHandler") || msg.contains("未包含协议网关转换规则") {
         ErrorCategory::ProtocolTransformError
     } else if cls.contains("MqttAuthService") || msg.contains("URISyntaxException") {
         ErrorCategory::MqttAuthError
@@ -120,13 +116,9 @@ pub fn categorize_entry(entry: &LogEntry) -> ErrorCategory {
         ErrorCategory::ByteBufError
     } else if cls.contains("SafeElectricServiceImpl") {
         ErrorCategory::SafeElectricError
-    } else if cls.contains("EnergyStatusCacheImpl")
-        || cls.contains("FrEnergyServiceImpl")
-    {
+    } else if cls.contains("EnergyStatusCacheImpl") || cls.contains("FrEnergyServiceImpl") {
         ErrorCategory::EnergyProcessError
-    } else if cls.contains("AttachmentServiceImpl")
-        || msg.contains("TokenFilter Exception")
-    {
+    } else if cls.contains("AttachmentServiceImpl") || msg.contains("TokenFilter Exception") {
         ErrorCategory::AttachmentError
     } else {
         ErrorCategory::Other
@@ -147,17 +139,12 @@ pub fn extract_dispatch_cost(message: &str) -> Option<u64> {
 }
 
 pub fn extract_disabled_rule_id(message: &str) -> Option<String> {
-    DISABLED_RULE_RE
-        .captures(message)
-        .map(|c| c[1].to_string())
+    DISABLED_RULE_RE.captures(message).map(|c| c[1].to_string())
 }
 
 pub fn parse_log_file(path: &Path) -> Result<(String, usize, Vec<LogEntry>), AppError> {
     let file = File::open(path).map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
-    let file_name = path
-        .file_name()
-        .unwrap_or_default()
-        .to_string_lossy();
+    let file_name = path.file_name().unwrap_or_default().to_string_lossy();
 
     let mut raw = Vec::new();
     if file_name.ends_with(".gz") {
@@ -265,14 +252,10 @@ mod tests {
             thread: "".into(),
             class: "SysServiceImpl".into(),
             line: 962,
-            message: "SysService handlerLoginCache device not register: 25012004594201"
-                .into(),
+            message: "SysService handlerLoginCache device not register: 25012004594201".into(),
             has_stack: false,
         };
-        assert_eq!(
-            categorize_entry(&entry),
-            ErrorCategory::DeviceNotRegistered
-        );
+        assert_eq!(categorize_entry(&entry), ErrorCategory::DeviceNotRegistered);
     }
 
     #[test]
@@ -295,7 +278,9 @@ mod tests {
             thread: "".into(),
             class: "DispatchServiceImpl".into(),
             line: 675,
-            message: "DispatchService dispatchThirdPartyDispatchRule disabled ruleId=1224488946380046337".into(),
+            message:
+                "DispatchService dispatchThirdPartyDispatchRule disabled ruleId=1224488946380046337"
+                    .into(),
             has_stack: false,
         };
         assert_eq!(categorize_entry(&entry), ErrorCategory::DispatchDisabled);
@@ -339,9 +324,7 @@ mod tests {
     #[test]
     fn extracts_dispatch_cost() {
         assert_eq!(
-            extract_dispatch_cost(
-                "[DISPATCH-END] thread=dispatch-executor-5 cost=64195ms"
-            ),
+            extract_dispatch_cost("[DISPATCH-END] thread=dispatch-executor-5 cost=64195ms"),
             Some(64195)
         );
         assert_eq!(extract_dispatch_cost("no cost here"), None);
@@ -350,9 +333,7 @@ mod tests {
     #[test]
     fn extracts_disabled_rule_id() {
         assert_eq!(
-            extract_disabled_rule_id(
-                "disabled ruleId=1224488946380046337"
-            ),
+            extract_disabled_rule_id("disabled ruleId=1224488946380046337"),
             Some("1224488946380046337".to_string())
         );
     }

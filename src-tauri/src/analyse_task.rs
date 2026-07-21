@@ -15,7 +15,11 @@ use crate::settings::Settings;
 pub type AnalyseEventSink = Arc<dyn Fn(AnalyseEvent) + Send + Sync + 'static>;
 
 #[derive(Clone, Debug, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "snake_case",
+    rename_all_fields = "camelCase"
+)]
 pub enum AnalyseEvent {
     Stage {
         task_id: Uuid,
@@ -211,10 +215,7 @@ async fn run_analysis(
 
         let system = build_system_prompt_for_batch(batch_name);
 
-        match client
-            .chat(&system, &prompt, cancellation)
-            .await
-        {
+        match client.chat(&system, &prompt, cancellation).await {
             Ok(content) => {
                 (events)(AnalyseEvent::AiChunk {
                     task_id,
@@ -275,8 +276,15 @@ fn build_ai_batches(
     b1.push_str("## 批次 1: 平台概览与性能分析\n\n");
     b1.push_str("请分析以下日志统计数据，评估平台整体健康状态，重点关注性能问题（线程卡顿、连接泄漏等）。\n\n");
     b1.push_str("### 基本统计\n");
-    b1.push_str(&format!("- 时间范围: {} ~ {}\n", summary.time_start.as_deref().unwrap_or("N/A"), summary.time_end.as_deref().unwrap_or("N/A")));
-    b1.push_str(&format!("- 总行数: {}, 条目: {}, 线程数: {}\n", summary.total_lines, summary.entry_count, summary.thread_count));
+    b1.push_str(&format!(
+        "- 时间范围: {} ~ {}\n",
+        summary.time_start.as_deref().unwrap_or("N/A"),
+        summary.time_end.as_deref().unwrap_or("N/A")
+    ));
+    b1.push_str(&format!(
+        "- 总行数: {}, 条目: {}, 线程数: {}\n",
+        summary.total_lines, summary.entry_count, summary.thread_count
+    ));
     b1.push_str(&format!("- 涉及设备 SN: {} 个\n", summary.unique_sns.len()));
     b1.push_str(&format!("- 连接泄漏次数: {}\n\n", summary.connection_leaks));
 
@@ -369,7 +377,14 @@ fn category_display_name(cat: &ErrorCategory) -> &str {
     }
 }
 
-fn emit_stage(events: &AnalyseEventSink, task_id: Uuid, stage: &str, _pct: u32, _end_pct: u32, _detail: &str) {
+fn emit_stage(
+    events: &AnalyseEventSink,
+    task_id: Uuid,
+    stage: &str,
+    _pct: u32,
+    _end_pct: u32,
+    _detail: &str,
+) {
     (events)(AnalyseEvent::Stage {
         task_id,
         stage: stage.to_string(),

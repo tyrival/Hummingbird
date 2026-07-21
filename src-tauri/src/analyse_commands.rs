@@ -1,7 +1,7 @@
 use serde::Serialize;
 use std::{
     path::{Path, PathBuf},
-    sync::{Arc, mpsc},
+    sync::{mpsc, Arc},
 };
 
 use tokio_util::sync::CancellationToken;
@@ -46,10 +46,7 @@ impl AnalyseConfig {
                                 config.log_analyse_dir = if p.is_absolute() {
                                     p.to_string_lossy().into_owned()
                                 } else {
-                                    app_config_dir
-                                        .join(p)
-                                        .to_string_lossy()
-                                        .into_owned()
+                                    app_config_dir.join(p).to_string_lossy().into_owned()
                                 };
                             }
                             "SSH_SERVERS" if !value.is_empty() => {
@@ -62,7 +59,10 @@ impl AnalyseConfig {
                                         config.ssh_servers = servers;
                                     }
                                     Err(e) => {
-                                        eprintln!("[AnalyseConfig::load] SSH_SERVERS parse error: {:?}", e);
+                                        eprintln!(
+                                            "[AnalyseConfig::load] SSH_SERVERS parse error: {:?}",
+                                            e
+                                        );
                                     }
                                 }
                             }
@@ -78,14 +78,12 @@ impl AnalyseConfig {
         config
     }
 
-    pub fn save_ssh_servers(
-        &mut self,
-        servers: Vec<SshServerConfig>,
-    ) -> Result<(), AppError> {
+    pub fn save_ssh_servers(&mut self, servers: Vec<SshServerConfig>) -> Result<(), AppError> {
         self.ssh_servers = servers;
-        write_config_txt_key("SSH_SERVERS", &crate::sftp_download::serialize_servers_to_config(
-            &self.ssh_servers,
-        )?)
+        write_config_txt_key(
+            "SSH_SERVERS",
+            &crate::sftp_download::serialize_servers_to_config(&self.ssh_servers)?,
+        )
     }
 }
 
@@ -106,8 +104,7 @@ fn default_analyse_dir() -> PathBuf {
 fn find_config_txt() -> Option<PathBuf> {
     #[cfg(target_os = "macos")]
     if let Some(home) = std::env::var_os("HOME") {
-        let path =
-            PathBuf::from(home).join("Library/Application Support/Hummingbird/config.txt");
+        let path = PathBuf::from(home).join("Library/Application Support/Hummingbird/config.txt");
         if path.exists() {
             return Some(path);
         }
@@ -140,15 +137,13 @@ fn write_config_txt_key(key: &str, value: &str) -> Result<(), AppError> {
     let config_path = find_config_txt().unwrap_or_else(|| {
         #[cfg(target_os = "macos")]
         if let Some(home) = std::env::var_os("HOME") {
-            return PathBuf::from(home)
-                .join("Library/Application Support/Hummingbird/config.txt");
+            return PathBuf::from(home).join("Library/Application Support/Hummingbird/config.txt");
         }
         PathBuf::from("config.txt")
     });
 
     if let Some(parent) = config_path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+        std::fs::create_dir_all(parent).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
     }
 
     let content = if config_path.exists() {
@@ -182,8 +177,7 @@ fn write_config_txt_key(key: &str, value: &str) -> Result<(), AppError> {
         }
     };
 
-    std::fs::write(&config_path, new_content)
-        .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+    std::fs::write(&config_path, new_content).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
     Ok(())
 }
 
@@ -213,9 +207,7 @@ use crate::settings::SettingsStore;
 const ANALYSE_EVENT: &str = "analyse-event";
 
 #[tauri::command]
-pub fn get_analyse_config(
-    app: AppHandle,
-) -> AnalyseConfig {
+pub fn get_analyse_config(app: AppHandle) -> AnalyseConfig {
     let app_config_dir = app
         .path()
         .app_config_dir()
@@ -238,9 +230,7 @@ pub fn save_ssh_servers(
 }
 
 #[tauri::command]
-pub fn test_ssh_connection(
-    server: SshServerConfig,
-) -> Result<String, AppError> {
+pub fn test_ssh_connection(server: SshServerConfig) -> Result<String, AppError> {
     eprintln!(
         "[test_ssh_connection] name={} host={}:{} user={} app_root=\"{}\" has_password={} has_key={}",
         server.name,
@@ -304,23 +294,17 @@ pub async fn start_log_analysis(
         let _ = handle.emit(ANALYSE_EVENT, event);
     });
 
-    state
-        .task_manager
-        .start(paths, settings, events)?;
+    state.task_manager.start(paths, settings, events)?;
     Ok(())
 }
 
 #[tauri::command]
-pub fn cancel_log_analysis(
-    state: State<'_, AnalyseAppState>,
-) -> Result<(), AppError> {
+pub fn cancel_log_analysis(state: State<'_, AnalyseAppState>) -> Result<(), AppError> {
     state.task_manager.cancel()
 }
 
 #[tauri::command]
-pub fn get_analyse_status(
-    state: State<'_, AnalyseAppState>,
-) -> AnalyseStatus {
+pub fn get_analyse_status(state: State<'_, AnalyseAppState>) -> AnalyseStatus {
     AnalyseStatus {
         active: state.task_manager.is_active(),
         stage: None,
@@ -336,11 +320,9 @@ pub struct AnalyseAppState {
 #[tauri::command]
 pub async fn select_log_folder(app: AppHandle) -> Result<Vec<String>, AppError> {
     let (tx, rx) = mpsc::channel();
-    app.dialog()
-        .file()
-        .pick_folder(move |folder| {
-            let _ = tx.send(folder);
-        });
+    app.dialog().file().pick_folder(move |folder| {
+        let _ = tx.send(folder);
+    });
     let folder = rx.recv().ok().flatten();
     let Some(path) = folder else {
         return Ok(Vec::new());
@@ -378,7 +360,5 @@ pub async fn select_key_file(app: AppHandle) -> Result<String, AppError> {
     let path_buf = path
         .into_path()
         .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
-    std::fs::read_to_string(&path_buf)
-        .map_err(|_| AppError::new(ErrorCode::FileNotFound))
+    std::fs::read_to_string(&path_buf).map_err(|_| AppError::new(ErrorCode::FileNotFound))
 }
-

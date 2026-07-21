@@ -51,8 +51,7 @@ pub struct ThreadStuckInfo {
 
 pub fn aggregate(entries: &[LogEntry]) -> LogSummary {
     let entry_count = entries.len();
-    let total_lines = entry_count
-        + entries.iter().filter(|e| e.has_stack).count();
+    let total_lines = entry_count + entries.iter().filter(|e| e.has_stack).count();
     let time_start = entries.first().map(|e| e.timestamp.clone());
     let time_end = entries.last().map(|e| e.timestamp.clone());
 
@@ -127,7 +126,11 @@ pub fn aggregate(entries: &[LogEntry]) -> LogSummary {
         thread_count: threads.len(),
         sn_errors: sn_error_map
             .into_iter()
-            .map(|((sn, error_type), count)| SnErrorCount { sn, error_type, count })
+            .map(|((sn, error_type), count)| SnErrorCount {
+                sn,
+                error_type,
+                count,
+            })
             .collect(),
     }
 }
@@ -210,10 +213,7 @@ pub fn find_thread_stuck_candidates(
 
     for (i, entry) in entries.iter().enumerate() {
         if entry.message.starts_with("[DISPATCH-START]") {
-            start_map.insert(
-                entry.thread.clone(),
-                (entry.timestamp.clone(), i),
-            );
+            start_map.insert(entry.thread.clone(), (entry.timestamp.clone(), i));
         } else if entry.message.starts_with("[DISPATCH-END]") {
             if let Some((start_time, _)) = start_map.remove(&entry.thread) {
                 if let Some(cost) = crate::log_parse::extract_dispatch_cost(&entry.message) {
@@ -324,8 +324,7 @@ mod tests {
                 thread: "global-schedule-task-6".into(),
                 class: "com.acrel.xch.mqtt.sys.service.impl.SysServiceImpl".into(),
                 line: 962,
-                message: "SysService handlerLoginCache device not register: 25012004594201"
-                    .into(),
+                message: "SysService handlerLoginCache device not register: 25012004594201".into(),
                 has_stack: false,
             },
             LogEntry {
@@ -333,8 +332,7 @@ mod tests {
                 thread: "dispatch-executor-5".into(),
                 class: "com.acrel.disp.service.impl.DispatchServiceImpl".into(),
                 line: 468,
-                message: "[DISPATCH-START] thread=dispatch-executor-5 tid=1249767391"
-                    .into(),
+                message: "[DISPATCH-START] thread=dispatch-executor-5 tid=1249767391".into(),
                 has_stack: false,
             },
             LogEntry {
@@ -342,9 +340,8 @@ mod tests {
                 thread: "dispatch-executor-5".into(),
                 class: "com.acrel.disp.service.impl.DispatchServiceImpl".into(),
                 line: 537,
-                message:
-                    "[DISPATCH-END] thread=dispatch-executor-5 tid=1249767391 cost=64195ms"
-                        .into(),
+                message: "[DISPATCH-END] thread=dispatch-executor-5 tid=1249767391 cost=64195ms"
+                    .into(),
                 has_stack: false,
             },
         ]

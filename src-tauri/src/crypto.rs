@@ -14,8 +14,7 @@ const SALT: &[u8] = b"hummingbird-ssh-config-v1";
 /// Derive a 32-byte AES key from the system hostname and fixed salt.
 /// This gives a deterministic, machine-specific key without storing secrets.
 fn derive_key() -> [u8; 32] {
-    let host = hostname()
-        .unwrap_or_else(|| "hummingbird-default".into());
+    let host = hostname().unwrap_or_else(|| "hummingbird-default".into());
     let mut hasher = Sha256::new();
     hasher.update(host.as_bytes());
     hasher.update(SALT);
@@ -43,8 +42,8 @@ fn hostname() -> Option<String> {
 
 pub fn encrypt_ssh_config(plaintext: &str) -> Result<String, AppError> {
     let key = derive_key();
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
     let mut nonce_bytes = [0u8; NONCE_BYTES];
     rand::thread_rng().fill(&mut nonce_bytes);
     let nonce = Nonce::from_slice(&nonce_bytes);
@@ -69,8 +68,8 @@ pub fn decrypt_ssh_config(ciphertext_b64: &str) -> Result<String, AppError> {
     }
     let (nonce_bytes, ciphertext) = combined.split_at(NONCE_BYTES);
     let key = derive_key();
-    let cipher = Aes256Gcm::new_from_slice(&key)
-        .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+    let cipher =
+        Aes256Gcm::new_from_slice(&key).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
     let nonce = Nonce::from_slice(nonce_bytes);
     let plaintext = cipher
         .decrypt(nonce, ciphertext)
@@ -84,7 +83,8 @@ mod tests {
 
     #[test]
     fn round_trips_ssh_config() {
-        let original = r#"[{"name":"test","host":"192.168.1.1","port":22,"user":"root","password":"secret"}]"#;
+        let original =
+            r#"[{"name":"test","host":"192.168.1.1","port":22,"user":"root","password":"secret"}]"#;
         let encrypted = encrypt_ssh_config(original).unwrap();
         let decrypted = decrypt_ssh_config(&encrypted).unwrap();
         assert_eq!(decrypted, original);

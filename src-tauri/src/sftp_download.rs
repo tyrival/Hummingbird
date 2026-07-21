@@ -59,8 +59,7 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
     tcp.set_read_timeout(Some(Duration::from_secs(60)))
         .map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
 
-    let mut session =
-        Session::new().map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
+    let mut session = Session::new().map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
     session.set_tcp_stream(tcp);
     session
         .handshake()
@@ -70,7 +69,10 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
     // Both can be present — key takes precedence.
     let mut authenticated = false;
     if let Some(key) = &server.private_key {
-        eprintln!("[connect_session] trying pubkey auth for user={}", server.user);
+        eprintln!(
+            "[connect_session] trying pubkey auth for user={}",
+            server.user
+        );
         if let Ok(()) = session.userauth_pubkey_memory(&server.user, None, key, None) {
             eprintln!("[connect_session] pubkey auth succeeded");
             authenticated = true;
@@ -80,7 +82,10 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
     }
     if !authenticated {
         if let Some(_password) = &server.password {
-            eprintln!("[connect_session] trying password auth for user={}", server.user);
+            eprintln!(
+                "[connect_session] trying password auth for user={}",
+                server.user
+            );
             session
                 .userauth_password(&server.user, _password)
                 .map_err(|_| AppError::new(ErrorCode::AuthenticationFailed))?;
@@ -152,8 +157,7 @@ pub fn download_logs(
     local_dir: &Path,
     cancellation: &CancellationToken,
 ) -> Result<Vec<PathBuf>, AppError> {
-    std::fs::create_dir_all(local_dir)
-        .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+    std::fs::create_dir_all(local_dir).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
 
     let session = connect_session(server)?;
     let sftp = session
@@ -180,15 +184,14 @@ pub fn download_logs(
             .map_err(|_| AppError::new(ErrorCode::ParseFailed))?;
         drop(remote_file);
 
-        std::fs::write(&local_path, &buffer)
-            .map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
+        std::fs::write(&local_path, &buffer).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
 
         // Decompress .gz files
         if filename.ends_with(".gz") {
             let decompressed_name = filename.trim_end_matches(".gz").to_string();
             let decompressed_path = local_dir.join(&decompressed_name);
-            let compressed = std::fs::read(&local_path)
-                .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
+            let compressed =
+                std::fs::read(&local_path).map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
             let mut decoder = flate2::read::GzDecoder::new(&compressed[..]);
             let mut decompressed = Vec::new();
             decoder

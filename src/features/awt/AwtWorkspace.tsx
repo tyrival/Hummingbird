@@ -17,7 +17,6 @@ import { type JSX, useEffect, useRef, useState } from 'react';
 import {
   getSettings,
   listenForInputDropResults,
-  openOutputDirectory,
   openTaskOutputDirectory,
   saveSettings,
   selectInputFile,
@@ -102,14 +101,6 @@ export function AwtWorkspace({
     if (!selectedInput) return;
     setInputConsumed(true);
     await task.start(selectedInput.path);
-  };
-
-  const openOutput = async () => {
-    try {
-      await openOutputDirectory();
-    } catch (error) {
-      showError(error as AppErrorDto, '无法打开输出目录');
-    }
   };
 
   const chooseNewOutput = async () => {
@@ -220,14 +211,6 @@ export function AwtWorkspace({
       <footer className="workspace-footer">
         <Text c="dimmed" size="xs">输出目录</Text>
         <Text className="workspace-footer__path" ff="monospace" size="xs">{outputDirectory}</Text>
-        <Button
-          leftSection={<IconFolderOpen size={16} />}
-          onClick={() => void openOutput()}
-          size="compact-sm"
-          variant="subtle"
-        >
-          打开
-        </Button>
         <Button
           leftSection={<IconFolderOpen size={16} />}
           onClick={() => void chooseNewOutput()}

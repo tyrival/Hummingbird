@@ -22,7 +22,7 @@ interface ServerListModalProps {
 }
 
 function emptyServer(): SshServerConfig {
-  return { name: '', host: '', port: 22, user: 'root', password: '', appRoot: '/home/acrel-iot-linux' };
+  return { name: '', host: '', port: 22, user: 'root', password: '', appRoot: '' };
 }
 
 export function ServerListModal({
@@ -234,7 +234,7 @@ export function ServerListModal({
           <TextInput
             label="应用根目录"
             onChange={(e) => setDraft({ ...draft, appRoot: e.currentTarget.value })}
-            placeholder="/home/acrel-iot-linux"
+            placeholder="/home/acrel-iot-linux/service/exchange/log"
             value={draft.appRoot}
           />
           {testResult && (

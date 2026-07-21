@@ -105,18 +105,16 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
 /// Uses SFTP only — no shell/PTY commands are executed.
 pub fn list_remote_logs(
     server: &SshServerConfig,
-    relative_path: &str,
 ) -> Result<Vec<RemoteFile>, AppError> {
     let session = connect_session(server)?;
     let sftp = session
         .sftp()
         .map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
 
-    let full_path = Path::new(&server.app_root).join(relative_path);
+    let full_path = Path::new(&server.app_root);
     eprintln!(
-        "[list_remote_logs] app_root=\"{}\" relative=\"{}\" full_path=\"{}\"",
+        "[list_remote_logs] app_root=\"{}\" full_path=\"{}\"",
         server.app_root,
-        relative_path,
         full_path.display(),
     );
     let entries = match sftp.readdir(&full_path) {
@@ -152,7 +150,6 @@ pub fn list_remote_logs(
 /// Uses SFTP only — no shell/PTY commands are executed.
 pub fn download_logs(
     server: &SshServerConfig,
-    relative_path: &str,
     filenames: &[String],
     local_dir: &Path,
     cancellation: &CancellationToken,
@@ -174,7 +171,7 @@ pub fn download_logs(
         .sftp()
         .map_err(|_| AppError::new(ErrorCode::NetworkFailed))?;
 
-    let full_path = Path::new(&server.app_root).join(relative_path);
+    let full_path = Path::new(&server.app_root);
     let mut downloaded = Vec::new();
 
     for filename in filenames {

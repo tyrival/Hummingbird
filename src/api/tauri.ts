@@ -157,16 +157,14 @@ export const testSshConnection = (server: SshServerConfig): Promise<string> =>
 
 export const listRemoteLogs = (
   server: SshServerConfig,
-  relativePath?: string,
 ): Promise<RemoteFile[]> =>
-  invokeCommand<RemoteFile[]>('list_remote_logs_command', { server, relativePath });
+  invokeCommand<RemoteFile[]>('list_remote_logs_command', { server });
 
 export const downloadLogs = (
   server: SshServerConfig,
   remoteFiles: string[],
-  relativePath?: string,
 ): Promise<string[]> =>
-  invokeCommand<string[]>('download_logs_command', { server, remoteFiles, relativePath });
+  invokeCommand<string[]>('download_logs_command', { server, remoteFiles });
 
 export const startLogAnalysis = (filePaths: string[]): Promise<void> =>
   invokeCommand<void>('start_log_analysis', { filePaths });

@@ -116,7 +116,6 @@ export interface SshServerConfig {
 export interface AnalyseConfig {
   logAnalyseDir: string;
   sshServers: SshServerConfig[];
-  remoteRelativePath: string;
 }
 
 export interface RemoteFile {

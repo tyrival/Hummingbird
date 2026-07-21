@@ -103,7 +103,6 @@ describe('application shell', () => {
     api.getAnalyseConfig.mockResolvedValue({
       logAnalyseDir: '/tmp',
       sshServers: [],
-      remoteRelativePath: 'acrel-iot-linux/server/exchange/log',
     });
   });
 

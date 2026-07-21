@@ -9,14 +9,11 @@ use tokio_util::sync::CancellationToken;
 use crate::error::{AppError, ErrorCode};
 use crate::sftp_download::{RemoteFile, SshServerConfig};
 
-const DEFAULT_REMOTE_PATH: &str = "acrel-iot-linux/server/exchange/log";
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyseConfig {
     pub log_analyse_dir: String,
     pub ssh_servers: Vec<SshServerConfig>,
-    pub remote_relative_path: String,
 }
 
 impl AnalyseConfig {
@@ -24,7 +21,6 @@ impl AnalyseConfig {
         let mut config = Self {
             log_analyse_dir: default_analyse_dir().to_string_lossy().into_owned(),
             ssh_servers: Vec::new(),
-            remote_relative_path: DEFAULT_REMOTE_PATH.to_string(),
         };
         let config_path = find_config_txt();
         eprintln!(
@@ -65,9 +61,6 @@ impl AnalyseConfig {
                                         );
                                     }
                                 }
-                            }
-                            "LOG_REMOTE_RELATIVE_PATH" if !value.is_empty() => {
-                                config.remote_relative_path = value.to_string();
                             }
                             _ => {}
                         }
@@ -257,17 +250,15 @@ pub fn test_ssh_connection(server: SshServerConfig) -> Result<String, AppError> 
         server.password.is_some(),
         server.private_key.is_some(),
     );
-    crate::sftp_download::list_remote_logs(&server, DEFAULT_REMOTE_PATH)?;
+    crate::sftp_download::list_remote_logs(&server)?;
     Ok(format!("成功连接到 {}", server.name))
 }
 
 #[tauri::command]
 pub fn list_remote_logs_command(
     server: SshServerConfig,
-    relative_path: Option<String>,
 ) -> Result<Vec<RemoteFile>, AppError> {
-    let path = relative_path.unwrap_or_else(|| DEFAULT_REMOTE_PATH.to_string());
-    let mut files = crate::sftp_download::list_remote_logs(&server, &path)?;
+    let mut files = crate::sftp_download::list_remote_logs(&server)?;
     files.sort_by(|a, b| b.name.cmp(&a.name)); // newest first
     Ok(files)
 }
@@ -277,15 +268,12 @@ pub async fn download_logs_command(
     app: AppHandle,
     server: SshServerConfig,
     remote_files: Vec<String>,
-    relative_path: Option<String>,
 ) -> Result<Vec<String>, AppError> {
     let config = get_analyse_config(app.clone());
     let local_dir = PathBuf::from(&config.log_analyse_dir);
-    let path = relative_path.unwrap_or_else(|| DEFAULT_REMOTE_PATH.to_string());
     let cancellation = CancellationToken::new();
     let downloaded = crate::sftp_download::download_logs(
         &server,
-        &path,
         &remote_files,
         &local_dir,
         &cancellation,

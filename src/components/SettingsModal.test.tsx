@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as tauriApi from '../api/tauri';
 import type { SettingsDto } from '../api/types';
@@ -65,7 +65,6 @@ describe('SettingsModal', () => {
     fireEvent.change(screen.getByLabelText(/模型名称/), { target: { value: '' } });
     fireEvent.change(screen.getByLabelText('请求超时（秒）'), { target: { value: '0' } });
     fireEvent.change(screen.getByLabelText('最大输出 Token'), { target: { value: '0' } });
-    fireEvent.change(screen.getByRole('textbox', { name: /输出目录/ }), { target: { value: '' } });
     fireEvent.click(screen.getByText('高级设置'));
     fireEvent.change(screen.getByLabelText('单块最大字符数'), { target: { value: '7999' } });
     fireEvent.change(screen.getByLabelText('跨块上下文字符数'), { target: { value: '3001' } });
@@ -74,30 +73,9 @@ describe('SettingsModal', () => {
     expect(await screen.findByText('请输入 API 地址')).toBeInTheDocument();
     expect(screen.getByText('请输入模型名称')).toBeInTheDocument();
     expect(screen.getAllByText('请输入正整数')).toHaveLength(2);
-    expect(screen.getByText('请选择输出目录')).toBeInTheDocument();
     expect(screen.getByText('请输入 8000 到 60000 之间的整数')).toBeInTheDocument();
     expect(screen.getByText('请输入 0 到 3000 之间的整数')).toBeInTheDocument();
     expect(api.saveSettings).not.toHaveBeenCalled();
-  });
-
-  it('selects an output directory and preserves hidden settings while saving', async () => {
-    api.selectOutputDirectory.mockResolvedValue('/tmp/hummingbird-output');
-    const onSaved = vi.fn();
-    renderModal(onSaved);
-
-    fireEvent.click(screen.getByRole('button', { name: '浏览输出目录' }));
-    expect(await screen.findByDisplayValue('/tmp/hummingbird-output')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '保存设置' }));
-
-    await waitFor(() => expect(api.saveSettings).toHaveBeenCalledOnce());
-    expect(api.saveSettings).toHaveBeenCalledWith({
-      ...settings,
-      outputDirectory: '/tmp/hummingbird-output',
-    });
-    expect(onSaved).toHaveBeenCalledWith({
-      ...settings,
-      outputDirectory: '/tmp/hummingbird-output',
-    });
   });
 
   it('exposes the same manual update check callback from settings', () => {

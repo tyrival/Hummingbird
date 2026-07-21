@@ -130,20 +130,10 @@ describe('application shell', () => {
     expect(screen.getByRole('button', { name: '选择本地文件夹' })).toBeInTheDocument();
   });
 
-  it('loads settings, opens the settings modal and reflects a saved output directory', async () => {
-    api.saveSettings.mockImplementation(async (value) => value);
-    api.selectOutputDirectory.mockResolvedValue('/tmp/new-output');
+  it('renders AWT workspace with output directory in footer', async () => {
     renderApp();
 
     expect(await screen.findByText('output')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '设置' }));
-    expect(await screen.findByRole('dialog', { name: '设置' })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '浏览输出目录' }));
-    expect(await screen.findByDisplayValue('/tmp/new-output')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: '保存设置' }));
-
-    await waitFor(() => expect(api.saveSettings).toHaveBeenCalledOnce());
-    expect(await screen.findByText('/tmp/new-output')).toBeInTheDocument();
   });
 
   it('checks silently on startup and opens the updater when a newer version exists', async () => {

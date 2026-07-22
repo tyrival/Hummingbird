@@ -207,7 +207,7 @@ export function ServerListModal({
             value={draft.password ?? ''}
           />
           <Stack gap={4}>
-            <Text size="sm" fw={500}>SSH 私钥 (PEM)</Text>
+            <Text size="sm" fw={500}>SSH 私钥</Text>
             {draft.privateKey ? (
               <Group gap="xs">
                 <Text c="teal" size="sm" style={{ flex: 1 }} truncate>
@@ -232,7 +232,7 @@ export function ServerListModal({
             )}
           </Stack>
           <TextInput
-            label="应用根目录"
+            label="日志目录"
             onChange={(e) => setDraft({ ...draft, appRoot: e.currentTarget.value })}
             placeholder="/home/acrel-iot-linux/server/exchange/log"
             value={draft.appRoot}

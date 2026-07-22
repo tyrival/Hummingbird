@@ -352,7 +352,7 @@ pub async fn select_key_file(app: AppHandle) -> Result<String, AppError> {
     let (tx, rx) = mpsc::channel();
     app.dialog()
         .file()
-        .add_filter("PEM 密钥", &["pem", "key", ""])
+        .add_filter("SSH 私钥", &[""])
         .pick_file(move |file| {
             let _ = tx.send(file);
         });

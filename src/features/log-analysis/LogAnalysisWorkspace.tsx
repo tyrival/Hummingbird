@@ -216,7 +216,7 @@ export function LogAnalysisWorkspace({
           <Text c="blue" fw={700} size="xs" tt="uppercase">log analysis workspace</Text>
           <Title order={2}>平台日志分析</Title>
           <Text c="dimmed" mt={4} size="sm">
-            从远程服务器或本地加载 iot-exchange 容器日志，进行 AI 辅助分析。
+            从远程服务器下载或本地选择日志目录，进行 AI 辅助分析。
           </Text>
         </div>
         <Button

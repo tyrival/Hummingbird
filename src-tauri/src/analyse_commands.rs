@@ -324,7 +324,10 @@ fn find_log_files(dir: &Path) -> Vec<PathBuf> {
     let mut files = Vec::new();
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries.flatten() {
-            let is_file = entry.file_type().map(|kind| kind.is_file()).unwrap_or(false);
+            let is_file = entry
+                .file_type()
+                .map(|kind| kind.is_file())
+                .unwrap_or(false);
             let name = entry.file_name().to_string_lossy().into_owned();
             if is_file && crate::sftp_download::is_supported_log_file_name(&name) {
                 files.push(entry.path());

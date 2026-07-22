@@ -320,6 +320,20 @@ pub struct AnalyseAppState {
     pub task_manager: crate::analyse_task::AnalyseTaskManager,
 }
 
+fn find_log_files(dir: &Path) -> Vec<PathBuf> {
+    let mut files = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let is_file = entry.file_type().map(|kind| kind.is_file()).unwrap_or(false);
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if is_file && crate::sftp_download::is_supported_log_file_name(&name) {
+                files.push(entry.path());
+            }
+        }
+    }
+    files
+}
+
 #[tauri::command]
 pub async fn select_log_folder(app: AppHandle) -> Result<Vec<String>, AppError> {
     let (tx, rx) = mpsc::channel();
@@ -333,18 +347,10 @@ pub async fn select_log_folder(app: AppHandle) -> Result<Vec<String>, AppError> 
     let dir = path
         .into_path()
         .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
-    let mut files = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(&dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with("service-exchange")
-                && (name.ends_with(".log") || name.ends_with(".gz"))
-            {
-                files.push(entry.path().to_string_lossy().into_owned());
-            }
-        }
-    }
-    Ok(files)
+    Ok(find_log_files(&dir)
+        .into_iter()
+        .map(|path| path.to_string_lossy().into_owned())
+        .collect())
 }
 
 #[tauri::command]
@@ -364,4 +370,26 @@ pub async fn select_key_file(app: AppHandle) -> Result<String, AppError> {
         .into_path()
         .map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
     std::fs::read_to_string(&path_buf).map_err(|_| AppError::new(ErrorCode::FileNotFound))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn finds_supported_logs_without_filename_prefix() {
+        let directory = tempfile::tempdir().unwrap();
+        std::fs::write(directory.path().join("application.log"), "log").unwrap();
+        std::fs::write(directory.path().join("gateway.GZ"), "gzip").unwrap();
+        std::fs::write(directory.path().join("notes.txt"), "text").unwrap();
+        std::fs::create_dir(directory.path().join("nested.log")).unwrap();
+
+        let mut names = find_log_files(directory.path())
+            .into_iter()
+            .map(|path| path.file_name().unwrap().to_string_lossy().into_owned())
+            .collect::<Vec<_>>();
+        names.sort();
+
+        assert_eq!(names, vec!["application.log", "gateway.GZ"]);
+    }
 }

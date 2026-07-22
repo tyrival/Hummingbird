@@ -101,7 +101,12 @@ fn connect_session(server: &SshServerConfig) -> Result<Session, AppError> {
     Ok(session)
 }
 
-/// List service-exchange.log* files in the remote log directory.
+pub(crate) fn is_supported_log_file_name(name: &str) -> bool {
+    let lowercase_name = name.to_ascii_lowercase();
+    lowercase_name.ends_with(".log") || lowercase_name.ends_with(".gz")
+}
+
+/// List .log and .gz files in the remote log directory.
 /// Uses SFTP only — no shell/PTY commands are executed.
 pub fn list_remote_logs(server: &SshServerConfig) -> Result<Vec<RemoteFile>, AppError> {
     let session = connect_session(server)?;
@@ -131,7 +136,7 @@ pub fn list_remote_logs(server: &SshServerConfig) -> Result<Vec<RemoteFile>, App
                 .and_then(|n| n.to_str())
                 .unwrap_or("")
                 .to_string();
-            if name.starts_with("service-exchange.log") {
+            if is_supported_log_file_name(&name) {
                 files.push(RemoteFile {
                     name,
                     path: path.to_string_lossy().into_owned(),
@@ -153,16 +158,6 @@ pub fn download_logs(
     cancellation: &CancellationToken,
 ) -> Result<Vec<PathBuf>, AppError> {
     std::fs::create_dir_all(local_dir).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
-
-    // Clear old service-exchange log files before downloading new ones
-    if let Ok(entries) = std::fs::read_dir(local_dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().into_owned();
-            if name.starts_with("service-exchange.log") {
-                let _ = std::fs::remove_file(entry.path());
-            }
-        }
-    }
 
     let session = connect_session(server)?;
     let sftp = session
@@ -192,8 +187,8 @@ pub fn download_logs(
         std::fs::write(&local_path, &buffer).map_err(|_| AppError::new(ErrorCode::SaveFailed))?;
 
         // Decompress .gz files
-        if filename.ends_with(".gz") {
-            let decompressed_name = filename.trim_end_matches(".gz").to_string();
+        if filename.to_ascii_lowercase().ends_with(".gz") {
+            let decompressed_name = filename[..filename.len() - 3].to_string();
             let decompressed_path = local_dir.join(&decompressed_name);
             let compressed =
                 std::fs::read(&local_path).map_err(|_| AppError::new(ErrorCode::FileNotFound))?;
@@ -216,6 +211,16 @@ pub fn download_logs(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recognizes_supported_log_file_suffixes() {
+        for name in ["application.log", "gateway.GZ", "日志.LOG", "archive.gz"] {
+            assert!(is_supported_log_file_name(name), "should accept {name}");
+        }
+        for name in ["application.log.1", "archive.zip", "catalog", ".log.txt"] {
+            assert!(!is_supported_log_file_name(name), "should reject {name}");
+        }
+    }
 
     #[test]
     fn round_trips_server_config() {

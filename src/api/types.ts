@@ -15,6 +15,7 @@ export const ERROR_CODES = [
   'no_active_task',
   'cancelled',
   'update_failed',
+  'update_timeout',
   'update_blocked',
   'invalid_passthrough_input',
   'invalid_passthrough_source',

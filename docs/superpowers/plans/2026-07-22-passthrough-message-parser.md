@@ -863,3 +863,19 @@ Expected: 无空白错误；只包含本功能设计、计划、源码、测试 
 - [x] **Step 3:** 修改页面标题、副标题、SegmentedControl 选项顺序及 `sourceKind` 默认值，不改变 `manual/awt_template` API 值。
 - [x] **Step 4:** 更新切换资料类型测试，确认默认按钮为“选择 CSV”，切换到“AI识别说明书”后显示说明书文件类型并清除旧选择。
 - [x] **Step 5:** 运行前端定向测试、全量测试、TypeScript、ESLint、生产构建和 `git diff --check`；不提交、不 push。
+
+### Task 23: 更新检查 15 秒超时
+
+**Files:**
+- Modify: `src-tauri/src/updater.rs`
+- Modify: `src-tauri/src/error.rs`
+- Modify: `src/api/types.ts`
+- Test: `src-tauri/src/updater.rs`
+- Test: `src-tauri/src/error.rs`
+- Test: `src/App.test.tsx`
+
+- [x] **Step 1:** 添加 Rust 失败测试，使用暂停时间的 pending Future 验证 15 秒前不结束、到时返回 `update_timeout`；同时验证普通 updater 错误仍走现有手动/后台策略。
+- [x] **Step 2:** 添加错误契约测试及前端错误码契约，断言固定安全文案且 `ERROR_CODES` 包含 `update_timeout`。
+- [x] **Step 3:** 用 `tokio::time::timeout(Duration::from_secs(15), updater.check())` 包装更新清单请求，并将 elapsed 映射为独立错误。
+- [x] **Step 4:** 运行 updater/error 定向测试和 App 前端测试，确认手动检查通过 `finally` 恢复按钮、后台检查保持静默。
+- [x] **Step 5:** 运行 Rust/前端全量测试、TypeScript、ESLint、rustfmt、Clippy、cargo check、生产构建和 `git diff --check`；不提交、不 push。

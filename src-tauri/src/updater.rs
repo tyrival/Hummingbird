@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod tests {
     use super::{
-        check_outcome, install_mode_for_linux_environment, is_newer_version,
+        await_update_check, check_outcome, install_mode_for_linux_environment, is_newer_version,
         validate_install_readiness, version_matches_expected, InstallMode, PendingUpdateCache,
         UpdateCheckOutcome, UpdateDownloadEvent, UpdateInfo, UpdateRelease,
     };
+    use std::future::pending;
+    use std::time::Duration;
 
     fn release(version: &str) -> UpdateRelease {
         UpdateRelease {
@@ -62,6 +64,43 @@ mod tests {
         assert_eq!(
             serde_json::to_value(error).unwrap()["code"],
             "update_failed"
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn update_manifest_check_times_out_after_fifteen_seconds() {
+        let check = tokio::spawn(await_update_check(
+            pending::<Result<(), &'static str>>(),
+            Duration::from_secs(15),
+            true,
+        ));
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(14)).await;
+        assert!(!check.is_finished());
+        tokio::time::advance(Duration::from_secs(1)).await;
+        let error = check.await.unwrap().unwrap_err();
+        assert_eq!(
+            serde_json::to_value(error).unwrap(),
+            serde_json::json!({
+                "code": "update_timeout",
+                "message": "连接更新服务器超时，请检查网络或 GitHub 访问状态。",
+                "detail": null
+            })
+        );
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn background_update_timeout_remains_silent() {
+        let check = tokio::spawn(await_update_check(
+            pending::<Result<(), &'static str>>(),
+            Duration::from_secs(15),
+            false,
+        ));
+        tokio::task::yield_now().await;
+        tokio::time::advance(Duration::from_secs(15)).await;
+        assert_eq!(
+            check.await.unwrap().unwrap(),
+            Err("update check timed out".to_owned())
         );
     }
 
@@ -186,7 +225,9 @@ mod tests {
 use crate::error::{AppError, ErrorCode};
 use semver::Version;
 use serde::Serialize;
+use std::future::Future;
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_updater::UpdaterExt;
@@ -194,6 +235,7 @@ use tauri_plugin_updater::UpdaterExt;
 pub const RELEASE_PAGE_URL: &str =
     "https://github.com/tyrival/Hummingbird-Releases/releases/latest";
 const UPDATE_EVENT_NAME: &str = "update-download-event";
+const UPDATE_CHECK_TIMEOUT: Duration = Duration::from_secs(15);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -358,6 +400,22 @@ pub fn check_outcome(
     }
 }
 
+async fn await_update_check<F, T, E>(
+    future: F,
+    duration: Duration,
+    manual: bool,
+) -> Result<Result<T, String>, AppError>
+where
+    F: Future<Output = Result<T, E>>,
+    E: std::fmt::Display,
+{
+    match tokio::time::timeout(duration, future).await {
+        Ok(result) => Ok(result.map_err(|error| error.to_string())),
+        Err(_) if manual => Err(AppError::new(ErrorCode::UpdateTimeout)),
+        Err(_) => Ok(Err("update check timed out".to_owned())),
+    }
+}
+
 pub fn validate_install_readiness(
     active: bool,
     cleanup_pending: bool,
@@ -423,8 +481,8 @@ impl UpdateInfo {
 pub async fn check_for_update(app: AppHandle, manual: bool) -> Result<UpdateInfo, AppError> {
     let current_version = app.package_info().version.to_string();
     let checked = match app.updater() {
-        Ok(updater) => updater.check().await,
-        Err(error) => Err(error),
+        Ok(updater) => await_update_check(updater.check(), UPDATE_CHECK_TIMEOUT, manual).await?,
+        Err(error) => Err(error.to_string()),
     };
     let release = checked
         .map(|update| {

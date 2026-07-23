@@ -27,6 +27,7 @@ import type {
   TaskEvent,
   UpdateDownloadEvent,
 } from './types';
+import { ERROR_CODES } from './types';
 
 vi.mock('@tauri-apps/api/core', () => ({ invoke: vi.fn() }));
 vi.mock('@tauri-apps/api/event', () => ({ listen: vi.fn() }));
@@ -37,6 +38,10 @@ const mockedListen = vi.mocked(listen);
 describe('Tauri adapter', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+  });
+
+  it('exposes the update timeout error contract', () => {
+    expect(ERROR_CODES).toContain('update_timeout');
   });
 
   it('returns typed command results without exposing raw invoke to callers', async () => {

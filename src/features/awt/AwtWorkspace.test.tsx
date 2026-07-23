@@ -28,7 +28,6 @@ function renderWorkspace(onTaskActiveChange = vi.fn()) {
       <Notifications />
       <AwtWorkspace
         outputDirectory="output"
-        onOpenSettings={vi.fn()}
         onOutputDirectoryChange={vi.fn()}
         onTaskActiveChange={onTaskActiveChange}
       />

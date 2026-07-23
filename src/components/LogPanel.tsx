@@ -41,6 +41,8 @@ interface LogPanelProps {
   onStartStop: () => void;
   onOpenOutput?: (path: string) => void;
   buttonLabel?: string;
+  showActionButton?: boolean;
+  activeLabel?: string;
 }
 
 const stageLabels: Record<TaskStage, string> = {
@@ -105,6 +107,8 @@ export function LogPanel({
   onStartStop,
   onOpenOutput,
   buttonLabel,
+  showActionButton = true,
+  activeLabel,
 }: LogPanelProps): JSX.Element {
   const visibleEntries = entries.slice(-500);
 
@@ -112,7 +116,7 @@ export function LogPanel({
     <section className="log-panel" aria-label="处理日志">
       <Group justify="space-between" px="md" py="xs" wrap="nowrap">
         <Group gap="sm" wrap="nowrap">
-          <Button
+          {showActionButton ? <Button
             color={task.active ? 'red' : 'blue'}
             disabled={!task.active && !task.canStart}
             leftSection={task.active ? <IconSquare size={15} /> : <IconPlayerPlay size={17} />}
@@ -121,9 +125,11 @@ export function LogPanel({
             variant="filled"
           >
             {task.active ? '停止' : (buttonLabel ?? '开始提取')}
-          </Button>
+          </Button> : null}
           {task.terminal ? (
             terminalSummary(task.terminal, onOpenOutput)
+          ) : task.active && activeLabel ? (
+            <Text size="sm">{activeLabel}</Text>
           ) : task.active && task.stage ? (
             <Text size="sm">{stageLabels[task.stage]}</Text>
           ) : (

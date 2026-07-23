@@ -11,7 +11,6 @@ import {
   IconFile,
   IconFolderOpen,
   IconServer,
-  IconSettings,
 } from '@tabler/icons-react';
 import { type JSX, useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -34,13 +33,11 @@ import { ServerListModal } from './ServerListModal';
 interface LogAnalysisWorkspaceProps {
   logAnalyseDir: string;
   onLogAnalyseDirChange: (dir: string) => void;
-  onOpenSettings: () => void;
 }
 
 export function LogAnalysisWorkspace({
   logAnalyseDir,
   onLogAnalyseDirChange,
-  onOpenSettings,
 }: LogAnalysisWorkspaceProps): JSX.Element {
   const [config, setConfig] = useState<AnalyseConfig | null>(null);
   const [serverModalOpen, setServerModalOpen] = useState(false);
@@ -219,14 +216,6 @@ export function LogAnalysisWorkspace({
             从远程服务器下载或本地选择日志目录，进行 AI 辅助分析。
           </Text>
         </div>
-        <Button
-          aria-label="设置"
-          leftSection={<IconSettings size={17} />}
-          onClick={onOpenSettings}
-          variant="subtle"
-        >
-          设置
-        </Button>
       </header>
 
       <Card className="input-card" padding="lg" radius="lg" style={{ flexShrink: 0 }} withBorder>

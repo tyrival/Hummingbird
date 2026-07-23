@@ -14,6 +14,8 @@ import {
   type UpdateDownloadResult,
   type UpdateInfoDto,
   type UpdateInstallResult,
+  type PassthroughBatchResult,
+  type PassthroughParseRequest,
 } from './types';
 
 type CommandArguments = Record<string, unknown>;
@@ -119,6 +121,14 @@ export const installDownloadedUpdate = (
 
 export const relaunchApp = (): Promise<void> =>
   invokeCommand<void>('relaunch_app');
+
+export const parsePassthroughMessages = (
+  request: PassthroughParseRequest,
+): Promise<PassthroughBatchResult> =>
+  invokeCommand<PassthroughBatchResult>('parse_passthrough_messages', { request });
+
+export const cancelPassthroughParse = (): Promise<void> =>
+  invokeCommand<void>('cancel_passthrough_parse');
 
 export async function listenForUpdateDownloadEvents(
   listener: (event: UpdateDownloadEvent) => void,

@@ -28,7 +28,7 @@
 | --- | --- | --- |
 | Tauri 2、React、TypeScript、Mantine | `src-tauri/`、`src/`、`package.json` | React shell 测试、TypeScript、ESLint、Vite production build、Cargo check |
 | AWT 模板生成 | `AwtWorkspace.tsx`、`task.rs`、`register_csv.rs`、`output.rs` | 前端任务生命周期测试和 Rust 端到端任务测试 |
-| 透传命令识别本期保持空白 | `PassthroughWorkspace.tsx` | `App.test.tsx` 验证空语义工作区 |
+| 透传报文解析 | `src-tauri/src/passthrough/`、`PassthroughWorkspace.tsx` | 已增加输入分割、平台外层、Modbus、DL/T 645-2007、CJ/T 188-2018、AWT 地址映射、说明书内存临时映射、数据类型/端序换算、受控 AI 返回校验、前端契约与结果卡测试；645/188 使用标准结构合成 fixture，不代表真实设备验证。本轮未获授权运行测试 |
 | PDF、DOCX、XLS、XLSX、CSV | `extraction/` | 格式夹具、编码、隐藏 sheet、空行、损坏/加密文件和扫描 PDF 测试 |
 | `.doc` 给出另存为 DOCX 提示 | `extraction/mod.rs` | `legacy_doc_returns_explicit_save_as_docx_guidance` |
 | 单文件最大 50 MiB | `MAX_INPUT_BYTES` | 边界值 50 MiB 接受、超 1 字节拒绝 |

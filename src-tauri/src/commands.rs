@@ -479,6 +479,37 @@ impl CommandState {
         take_authorized_input(&mut session, path)
     }
 
+    pub(crate) fn read_authorized_input(&self, path: &Path) -> Result<Vec<u8>, AppError> {
+        let requested = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let session = self.session();
+        let authorized = session
+            .authorized_input
+            .as_ref()
+            .filter(|authorized| {
+                authorized.display_path == path
+                    || authorized.original_canonical == requested
+                    || authorized.staged_path == requested
+            })
+            .ok_or_else(|| AppError::new(ErrorCode::InvalidPassthroughSource))?;
+        fs::read(&authorized.staged_path)
+            .map_err(|_| AppError::new(ErrorCode::InvalidPassthroughSource))
+    }
+
+    pub(crate) fn authorized_input_path(&self, path: &Path) -> Result<PathBuf, AppError> {
+        let requested = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+        let session = self.session();
+        session
+            .authorized_input
+            .as_ref()
+            .filter(|authorized| {
+                authorized.display_path == path
+                    || authorized.original_canonical == requested
+                    || authorized.staged_path == requested
+            })
+            .map(|authorized| authorized.staged_path.clone())
+            .ok_or_else(|| AppError::new(ErrorCode::InvalidPassthroughSource))
+    }
+
     fn authorize_output_directory(&self, path: &Path) -> Result<PathBuf, AppError> {
         let canonical = canonical_directory(path)?;
         self.session()

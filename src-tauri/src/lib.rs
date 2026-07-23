@@ -12,6 +12,7 @@ pub mod log_parse;
 pub mod log_stats;
 pub mod naming;
 pub mod output;
+pub mod passthrough;
 pub mod prompt;
 pub mod register_csv;
 pub mod settings;
@@ -30,6 +31,7 @@ pub fn run() {
             let settings = settings::SettingsStore::load_or_migrate(app.handle());
             let staging_root = app.path().app_data_dir()?.join("input-staging");
             app.manage(commands::CommandState::production(settings, staging_root));
+            app.manage(passthrough::commands::PassthroughAppState::default());
             app.manage(updater::SignedUpdateState::default());
             app.manage(analyse_commands::AnalyseAppState {
                 task_manager: analyse_task::AnalyseTaskManager::new(),
@@ -96,6 +98,8 @@ pub fn run() {
             analyse_commands::select_log_folder,
             analyse_commands::select_key_file,
             analyse_commands::select_analyse_dir,
+            passthrough::commands::parse_passthrough_messages,
+            passthrough::commands::cancel_passthrough_parse,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Hummingbird application");

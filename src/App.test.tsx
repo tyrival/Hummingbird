@@ -1,6 +1,6 @@
 import { MantineProvider } from '@mantine/core';
 import { Notifications } from '@mantine/notifications';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as tauriApi from './api/tauri';
 import type { SettingsDto, TaskStatus } from './api/types';
@@ -10,6 +10,7 @@ import App from './App';
 vi.mock('./api/tauri', () => ({
   cancelExtraction: vi.fn(),
   cancelExtractionAndWait: vi.fn(),
+  cancelPassthroughParse: vi.fn(),
   checkForUpdate: vi.fn(),
   destroyMainWindow: vi.fn(),
   downloadUpdate: vi.fn(),
@@ -25,6 +26,7 @@ vi.mock('./api/tauri', () => ({
   listenForUpdateDownloadEvents: vi.fn(),
   openOutputDirectory: vi.fn(),
   openTaskOutputDirectory: vi.fn(),
+  parsePassthroughMessages: vi.fn(),
   prepareExit: vi.fn(),
   relaunchApp: vi.fn(),
   saveSettings: vi.fn(),
@@ -127,6 +129,28 @@ describe('application shell', () => {
 
     expect(screen.getByRole('button', { name: '服务器列表' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '选择本地文件夹' })).toBeInTheDocument();
+  });
+
+  it('opens the passthrough workspace with the confirmed copy', () => {
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: '透传报文解析' }));
+
+    expect(screen.getByRole('button', { name: '透传报文解析' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '王大佬帮看下这报文什么意思？' })).toBeInTheDocument();
+    expect(screen.getByText('Passthrough message workspace')).toBeInTheDocument();
+    expect(screen.getByText('解析中台报文里看不懂的十六进制透传报文')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '开始解析' })).toBeDisabled();
+  });
+
+  it('provides one global settings button in the sidebar footer', () => {
+    renderApp();
+    const sidebar = screen.getByRole('complementary', { name: '工作区导航' });
+    const settingsButtons = screen.getAllByRole('button', { name: '设置' });
+    expect(settingsButtons).toHaveLength(1);
+    const settingsButton = within(sidebar).getByRole('button', { name: '设置' });
+    expect(within(sidebar).getByRole('button', { name: '检查更新' }).nextElementSibling).toBe(settingsButton);
+    fireEvent.click(settingsButton);
+    expect(screen.getByRole('dialog', { name: '设置' })).toBeInTheDocument();
   });
 
   it('renders AWT workspace with output directory in footer', async () => {

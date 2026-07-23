@@ -192,7 +192,7 @@ fn repair_missing_unit(row: &mut Vec<String>) -> bool {
     true
 }
 
-fn parse_register_address(value: &str) -> Option<u64> {
+pub(crate) fn parse_register_address(value: &str) -> Option<u64> {
     let value = value.trim();
     if let Some(hex) = value
         .strip_prefix("0x")

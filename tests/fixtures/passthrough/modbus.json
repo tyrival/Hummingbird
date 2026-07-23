@@ -1,0 +1,8 @@
+[
+  {"input":"683236303632353039333330303031680110E000000677CB","platformSerial":"26062509330001","slave":1,"function":16,"startAddress":57344,"quantity":6,"crcValid":true,"source":"用户在上游规划任务提供的真实平台日志样例"},
+  {"input":"683236303632353039333330303031680110E006000697CA","platformSerial":"26062509330001","slave":1,"function":16,"startAddress":57350,"quantity":6,"crcValid":true,"source":"用户在上游规划任务提供的真实平台日志样例"},
+  {"input":"683236303632353039333330303031680110E00C0009F7CC","platformSerial":"26062509330001","slave":1,"function":16,"startAddress":57356,"quantity":9,"crcValid":true,"source":"用户在上游规划任务提供的真实平台日志样例"},
+  {"input":"683236303632353039333330303031680110E02A001517CE","platformSerial":"26062509330001","slave":1,"function":16,"startAddress":57386,"quantity":21,"crcValid":true,"source":"用户在上游规划任务提供的真实平台日志样例"},
+  {"input":"683236303432303039373030303036680120035400050A000D020301071A0000005A39","platformSerial":"26042009700006","slave":1,"function":32,"startAddress":852,"quantity":5,"crcValid":true,"source":"用户在上游规划任务提供的真实平台日志样例"},
+  {"input":"0420035400050A000D020301071A0000004968","platformSerial":null,"slave":4,"function":32,"startAddress":852,"quantity":5,"crcValid":true,"source":"用户在上游规划任务提供的真实直连私有 Modbus 样例"}
+]

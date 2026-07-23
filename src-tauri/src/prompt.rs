@@ -28,7 +28,7 @@ CSV 有 12 列，按顺序为：
   例如：文档「A相电压」→ 查表找到「Ua=A相电压」→ 填 Ua；文档「变比PT」→ 查表找到「PT=PT」→ 填 PT；文档「开关量输入」→ 查表找到「DI0=开关量输入」→ 填 DI0。
   如果能匹配到就填英文名；完全无法匹配的填 DOC_属性名（属性名取文档中该参数的原文，可能是英文或中文）。
   注意：data_name 列只填英文名（或 DOC_ 前缀的名称），不要在此列包含中文描述、单位等多余内容。
-- unit: 留空
+- unit: 说明书明确提供单位时原样保留（如 V、A、kWh）；没有单位时留空
 - reg_add: 寄存器地址，必须是纯十进制整数。文档中无论用什么格式（十六进制 0x10/0010H、起始地址+偏移量），都必须转换为十进制填入。
   例：文档写 0x10 或 0010H → 输出 16；文档写 0x0A → 输出 10；文档写「起始 0x1000 偏移 0x02」→ 输出 4098
 - reg_type: 数据类型，填入以下数字代码：
@@ -46,17 +46,23 @@ CSV 有 12 列，按顺序为：
   12=float（32位单精度浮点型，占2个寄存器）
   判断规则：根据文档中声明占用几个寄存器来选。1个寄存器 → 6/7；2个寄存器 → 8/9/12
   如果文档明确标记「有符号/signed」→ 选有符号类型(7/int16, 9/int32)；未标记 → 选无符号(6/uint16, 8/uint32)
-- endian: 端序，填入以下数字代码（默认填 1）：
+- endian: 端序，填入以下数字代码。Modbus 单寄存器 uint16/int16 默认 endian=1；只有说明书明确声明小端或字节交换时才使用 endian=0：
   1(bit): 0=B0~15=B15；2(bit2): 0=B0B1~7=B14B15；3(bit4): 0=B0B3~3=B12B15
-  4/5(uint8/int8): 0=big, 1=little；6/7(uint16/int16): 0=big, 1=little
+  4/5(uint8/int8): 0=big, 1=little；6/7(uint16/int16): 0=little, 1=big
   8/9/12(uint32/int32/float): 0=H1H2H3H4, 1=H4H3H2H1, 2=H3H4H1H2, 3=H2H1H4H3
   10/11(uint64/int64): 0=little, 1=big
-  默认填 1
+  其他多寄存器类型若说明书未明确端序，保持既有默认值 1
 - dcm: 采集小数位，必须是整数。原始值除以 (10^dcm) 得到实际值。如精度0.1→dcm=1；精度0.01→dcm=2；无小数填 0
 - k: 转发小数位，与 dcm 相同
 - fun_num: 固定填 3
 - calc: 留空
 - style: 固定填 0
+
+复合寄存器规则：
+- 只有说明书明确表明一个 16 位寄存器由两个按顺序列出的 8 位字段组成时，才拆成同一 reg_add 的两条记录。
+- 说明书先列出的字段使用 reg_type=4、endian=0（高字节），后列出的字段使用 reg_type=4、endian=1（低字节），两条记录的 dcm=0、k=1。
+- 两条记录分别保留各自的 data_name 和 unit；不得把两个字段合并成一个虚构标量。
+- 说明书没有明确字段顺序或位宽时不得拆分，不得猜测高低字节。
 
 输出规则：
 - 输出必须是纯 CSV 文本，以逗号分隔，每行一条记录。
@@ -89,21 +95,35 @@ mod tests {
             "CSV 有 12 列",
             "id,group,data_name,unit,reg_add,reg_type,endian,dcm,k,fun_num,calc,style",
             "- id: 流水号（从 1 开始自增）",
-            "- unit: 留空",
+            "- unit: 说明书明确提供单位时原样保留",
             "reg_add: 寄存器地址，必须是纯十进制整数",
             "1=bit（单比特位，占1个寄存器）",
             "6=uint16（16位无符号整型，占1个寄存器）",
             "12=float（32位单精度浮点型，占2个寄存器）",
             "10/11(uint64/int64): 0=little, 1=big",
+            "uint16/int16 默认 endian=1",
             "原始值除以 (10^dcm) 得到实际值",
             "精度0.01→dcm=2",
             "- k: 转发小数位，与 dcm 相同",
             "- fun_num: 固定填 3",
             "- calc: 留空",
             "- style: 固定填 0",
+            "一个 16 位寄存器由两个按顺序列出的 8 位字段组成",
+            "endian=0（高字节）",
+            "endian=1（低字节）",
+            "没有明确字段顺序或位宽时不得拆分",
         ] {
             assert!(prompt.contains(phrase), "missing legacy phrase: {phrase}");
         }
+    }
+
+    #[test]
+    fn preserves_units_and_defaults_single_register_integers_to_modbus_byte_order() {
+        let prompt = build_system_prompt(&catalog("Ua=A相电压"));
+        assert!(prompt.contains("说明书明确提供单位时原样保留"));
+        assert!(prompt.contains("uint16/int16 默认 endian=1"));
+        assert!(prompt.contains("明确声明小端或字节交换时才使用 endian=0"));
+        assert!(!prompt.contains("- unit: 留空"));
     }
 
     #[test]

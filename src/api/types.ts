@@ -16,6 +16,8 @@ export const ERROR_CODES = [
   'cancelled',
   'update_failed',
   'update_blocked',
+  'invalid_passthrough_input',
+  'invalid_passthrough_source',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
@@ -100,6 +102,80 @@ export type UpdateDownloadEvent =
 
 export type UpdateDownloadResult = 'downloaded' | 'opened_release_page';
 export type UpdateInstallResult = 'installed';
+
+export type PassthroughSourceKind = 'manual' | 'awt_template';
+
+export interface PassthroughSource {
+  kind: PassthroughSourceKind;
+  path: string;
+  fileName: string;
+}
+
+export interface PassthroughParseRequest {
+  requestHex: string;
+  responseHex: string | null;
+  source: PassthroughSource | null;
+}
+
+export type PassthroughProtocol = 'modbusRtu' | 'dlt645' | 'cjt188' | 'unknown';
+
+export interface PassthroughField {
+  name: string;
+  byteStart: number;
+  byteEnd: number;
+  rawHex: string;
+  displayValue: string;
+  source: 'code' | 'manual' | 'awtTemplate' | 'aiExplanation';
+}
+
+export interface PassthroughRegister {
+  address: number | null;
+  identifier: string | null;
+  rawHex: string;
+  source: 'code' | 'manual' | 'awtTemplate' | 'aiExplanation';
+}
+
+export interface PassthroughChecksum {
+  kind: string;
+  received: string | null;
+  calculated: string;
+  valid: boolean | null;
+}
+
+export interface PassthroughMessageResult {
+  index: number;
+  role: 'request' | 'response';
+  rawSegment: string;
+  cleanedHex: string | null;
+  protocol: PassthroughProtocol;
+  summary: string;
+  fields: PassthroughField[];
+  registers: PassthroughRegister[];
+  explanations: Array<{
+    address: number | null;
+    parameterCode: string | null;
+    parameterName: string | null;
+    unit: string | null;
+    rawHex: string;
+    convertedValue: string | null;
+    meaning: string | null;
+    source: 'code' | 'manual' | 'awtTemplate' | 'aiExplanation';
+    warnings: Array<{ code: string; message: string }>;
+  }>;
+  checksum: PassthroughChecksum | null;
+  warnings: Array<{ code: string; message: string }>;
+  error: { code: string; message: string } | null;
+}
+
+export interface PassthroughBatchResult {
+  results: PassthroughMessageResult[];
+  sourceWarning: string | null;
+  mappingDiagnostics?: {
+    extractedCount: number;
+    matchedCount: number;
+    unmatchedAddresses: number[];
+  } | null;
+}
 
 // ── Log Analysis ─────────────────────────────────────────────
 

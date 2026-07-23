@@ -251,6 +251,11 @@ input:focus-visible,
   text-overflow: ellipsis;
 }
 
+.passthrough-command-input,
+.passthrough-hex {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
 [data-mantine-color-scheme='dark'] .app-shell {
   color: var(--mantine-color-dark-0);
   background: var(--mantine-color-dark-8);
@@ -369,4 +374,111 @@ input:focus-visible,
   margin: 0.4em 0;
   padding: 0.2em 0.8em;
   color: var(--mantine-color-gray-6);
+}
+
+.passthrough-source-row {
+  overflow: hidden;
+}
+
+.passthrough-command-header > div:first-child {
+  min-width: 0;
+}
+
+.passthrough-command-header > button {
+  flex-shrink: 0;
+}
+
+.passthrough-message-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--mantine-spacing-md);
+  margin-top: var(--mantine-spacing-md);
+}
+
+@media (width <= 720px) {
+  .passthrough-message-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.passthrough-results,
+.passthrough-result {
+  flex-shrink: 0;
+}
+
+.passthrough-log {
+  display: flex;
+  flex-shrink: 0;
+  min-height: 240px;
+}
+
+.passthrough-source-file {
+  min-width: 0;
+}
+
+.passthrough-fields {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--mantine-spacing-md);
+}
+
+.passthrough-field {
+  overflow-wrap: anywhere;
+}
+
+.register-merge-column {
+  min-width: 0;
+  padding: var(--mantine-spacing-md);
+  border: 1px solid var(--mantine-color-gray-3);
+  border-radius: var(--mantine-radius-md);
+}
+
+.register-merge-value {
+  overflow-wrap: anywhere;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.35;
+}
+
+.register-merge-binary-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+}
+
+.register-merge-bits {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(10px, 1fr));
+  gap: 3px;
+}
+
+.register-merge-bits span {
+  aspect-ratio: 1;
+  background: var(--mantine-color-gray-2);
+  border-radius: 3px;
+}
+
+.register-merge-bits span.is-active {
+  background: var(--mantine-color-green-6);
+}
+
+[data-mantine-color-scheme='dark'] .register-merge-column {
+  border-color: var(--mantine-color-dark-4);
+}
+
+[data-mantine-color-scheme='dark'] .register-merge-bits span {
+  background: var(--mantine-color-dark-4);
+}
+
+.passthrough-details {
+  margin-top: 16px;
+}
+
+.passthrough-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.passthrough-hex {
+  overflow-wrap: anywhere;
 }

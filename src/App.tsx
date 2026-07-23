@@ -14,6 +14,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { UpdateModal } from './components/UpdateModal';
 import { AwtWorkspace } from './features/awt/AwtWorkspace';
 import { LogAnalysisWorkspace } from './features/log-analysis/LogAnalysisWorkspace';
+import { PassthroughWorkspace } from './features/passthrough/PassthroughWorkspace';
 
 const initialSettings: SettingsDto = {
   schemaVersion: 1,
@@ -154,12 +155,12 @@ export default function App(): JSX.Element {
         activeWorkspace={activeWorkspace}
         checkingUpdate={checkingUpdate}
         onCheckUpdate={() => void runUpdateCheck(true)}
+        onOpenSettings={() => setSettingsOpened(true)}
         onWorkspaceChange={setActiveWorkspace}
         taskActive={taskActive}
       />
       <div style={{ display: activeWorkspace === 'awt' ? undefined : 'none' }}>
         <AwtWorkspace
-          onOpenSettings={() => setSettingsOpened(true)}
           onOutputDirectoryChange={(dir: string) => setSettings((prev) => ({ ...prev, outputDirectory: dir }))}
           onTaskActiveChange={handleTaskActiveChange}
           outputDirectory={settings.outputDirectory}
@@ -169,8 +170,10 @@ export default function App(): JSX.Element {
         <LogAnalysisWorkspace
           logAnalyseDir={settings.logAnalyseDir}
           onLogAnalyseDirChange={(dir: string) => setSettings((prev) => ({ ...prev, logAnalyseDir: dir }))}
-          onOpenSettings={() => setSettingsOpened(true)}
         />
+      </div>
+      <div style={{ display: activeWorkspace === 'passthrough' ? undefined : 'none' }}>
+        <PassthroughWorkspace />
       </div>
       <SettingsModal
         onCheckUpdate={() => {

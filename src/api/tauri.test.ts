@@ -13,6 +13,8 @@ import {
   listenForUpdateDownloadEvents,
   openOutputDirectory,
   openTaskOutputDirectory,
+  parsePassthroughMessages,
+  cancelPassthroughParse,
   prepareExit,
   relaunchApp,
   saveSettings,
@@ -140,6 +142,20 @@ describe('Tauri adapter', () => {
       outputPath: '/tmp/result.csv',
     });
     expect(mockedInvoke).toHaveBeenNthCalledWith(8, 'prepare_exit', undefined);
+  });
+
+  it('passes passthrough requests under the Rust request argument', async () => {
+    mockedInvoke.mockResolvedValue({ results: [], sourceWarning: null });
+    const request = { requestHex: '010300000001840A', responseHex: null, source: null };
+
+    await parsePassthroughMessages(request);
+
+    expect(mockedInvoke).toHaveBeenCalledWith('parse_passthrough_messages', { request });
+  });
+
+  it('invokes the passthrough cancellation command', async () => {
+    await cancelPassthroughParse();
+    expect(mockedInvoke).toHaveBeenCalledWith('cancel_passthrough_parse', undefined);
   });
 
   it('only forwards Rust-authorized input-drop-result payloads', async () => {

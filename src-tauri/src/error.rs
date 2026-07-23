@@ -20,6 +20,8 @@ pub enum ErrorCode {
     Cancelled,
     UpdateFailed,
     UpdateBlocked,
+    InvalidPassthroughInput,
+    InvalidPassthroughSource,
 }
 
 impl ErrorCode {
@@ -44,6 +46,8 @@ impl ErrorCode {
             Self::Cancelled => "任务已取消。",
             Self::UpdateFailed => "更新失败。",
             Self::UpdateBlocked => "当前有任务、更新或清理操作正在进行，请完成后重试。",
+            Self::InvalidPassthroughInput => "透传报文输入无效。",
+            Self::InvalidPassthroughSource => "透传解析资料无效。",
         }
     }
 }
@@ -206,6 +210,8 @@ mod tests {
             ErrorCode::Cancelled,
             ErrorCode::UpdateFailed,
             ErrorCode::UpdateBlocked,
+            ErrorCode::InvalidPassthroughInput,
+            ErrorCode::InvalidPassthroughSource,
         ];
 
         let serialized = serde_json::to_string(&codes).expect("codes should serialize");
@@ -227,6 +233,8 @@ mod tests {
             "cancelled",
             "update_failed",
             "update_blocked",
+            "invalid_passthrough_input",
+            "invalid_passthrough_source",
         ] {
             assert!(serialized.contains(code), "missing {code}");
         }

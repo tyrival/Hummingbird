@@ -10,7 +10,6 @@ import { notifications } from '@mantine/notifications';
 import {
   IconFileDescription,
   IconFolderOpen,
-  IconSettings,
   IconUpload,
 } from '@tabler/icons-react';
 import { type JSX, useEffect, useRef, useState } from 'react';
@@ -28,14 +27,12 @@ import { useExtractionTask } from './useExtractionTask';
 
 interface AwtWorkspaceProps {
   outputDirectory: string;
-  onOpenSettings: () => void;
   onOutputDirectoryChange: (dir: string) => void;
   onTaskActiveChange: (active: boolean) => void;
 }
 
 export function AwtWorkspace({
   outputDirectory,
-  onOpenSettings,
   onOutputDirectoryChange,
   onTaskActiveChange,
 }: AwtWorkspaceProps): JSX.Element {
@@ -163,14 +160,6 @@ export function AwtWorkspace({
             从设备说明书或寄存器表提取参数，并生成标准 12 列 CSV 模板。
           </Text>
         </div>
-        <Button
-          aria-label="设置"
-          leftSection={<IconSettings size={17} />}
-          onClick={onOpenSettings}
-          variant="subtle"
-        >
-          设置
-        </Button>
       </header>
 
       <Card className="input-card" padding="lg" radius="lg" withBorder>
